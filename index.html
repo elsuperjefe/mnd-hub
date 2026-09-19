@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hub</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f141c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hub">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --ground:#0f141c;
+    --bar:#161e29;
+    --line:#2a3440;
+    --text:#f2f6fb;
+    --muted:#93a2b5;
+    --alarm:#c6392f;
+    --key:#7fb2ff;
+    --go:#2e8b7a;
+    --tile-min:210px;
+    --gutter:26px;
+    --drop:7px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 20% -10%, #1b2534 0%, transparent 60%),
+      var(--ground);
+    color:var(--text);
+    font-family:"Segoe UI Variable Display","Segoe UI",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    font-size:18px;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  button:focus-visible{outline:4px solid var(--key);outline-offset:4px}
+
+  /* ---------- pressable look, used everywhere ---------- */
+  .press{
+    position:relative;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.34),
+      inset 0 -2px 0 rgba(0,0,0,.30),
+      0 var(--drop) 0 rgba(0,0,0,.42),
+      0 calc(var(--drop) + 8px) 20px rgba(0,0,0,.40);
+    transform:translateY(0);
+    transition:transform .07s ease-out, box-shadow .07s ease-out, filter .12s;
+  }
+  .press::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:linear-gradient(180deg, rgba(255,255,255,.20) 0%, rgba(255,255,255,.05) 42%, rgba(0,0,0,.14) 100%);
+  }
+  .press:hover{filter:brightness(1.10)}
+  .press:active,.press.down{
+    transform:translateY(var(--drop));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.22),
+      inset 0 -1px 0 rgba(0,0,0,.24),
+      0 1px 0 rgba(0,0,0,.40),
+      0 3px 8px rgba(0,0,0,.35);
+  }
+
+  /* ---------- top bar ---------- */
+  .bar{
+    flex:0 0 auto;height:78px;display:flex;align-items:center;gap:20px;
+    padding:0 24px;background:var(--bar);border-bottom:1px solid var(--line);
+  }
+  .clock{font-size:31px;font-weight:650;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;line-height:1}
+  .date{font-size:19px;color:var(--muted)}
+  .bar .spacer{flex:1}
+  .barbtn{
+    min-height:56px;padding:0 26px;border-radius:14px;
+    background:linear-gradient(180deg,#31404f,#212b38);
+    font-size:20px;font-weight:650;--drop:4px;
+  }
+  .barbtn[aria-pressed="true"]{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+
+  .warn{
+    flex:0 0 auto;display:none;padding:14px 24px;background:#4a2b28;
+    border-bottom:1px solid #7a4239;font-size:17px;line-height:1.45;
+  }
+  body.nostore .warn{display:block}
+
+  /* ---------- grid ---------- */
+  .grid{
+    flex:1 1 auto;overflow-y:auto;
+    padding:var(--gutter) var(--gutter) 34px;
+    display:grid;gap:calc(var(--gutter) + 4px);
+    grid-template-columns:repeat(auto-fill,minmax(var(--tile-min),1fr));
+    align-content:start;
+  }
+  .tile{
+    min-height:var(--tile-min);
+    padding:22px;
+    display:flex;flex-direction:column;justify-content:space-between;
+    text-align:left;
+    background-color:#2f6fb3;
+  }
+  .tile .glyph{
+    position:relative;z-index:1;
+    width:74px;height:74px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;line-height:1;
+    background:rgba(0,0,0,.24);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(0,0,0,.22);
+  }
+  .tile .name{
+    position:relative;z-index:1;
+    font-size:25px;font-weight:700;line-height:1.15;
+    text-shadow:0 2px 3px rgba(0,0,0,.38);
+  }
+  .tile.alarm{background-color:var(--alarm)}
+  .tile.add{
+    background:none;border:3px dashed #3b4757;box-shadow:none;color:var(--muted);
+  }
+  .tile.add::after{display:none}
+  .tile.add:active{transform:none}
+
+  /* edit-mode controls */
+  .ctl{
+    position:absolute;z-index:2;width:62px;height:62px;border-radius:16px;
+    background:rgba(0,0,0,.62);font-size:26px;font-weight:700;
+    display:none;align-items:center;justify-content:center;
+    border:1px solid rgba(255,255,255,.2);
+  }
+  body.editing .ctl{display:flex}
+  .ctl.del{top:12px;right:12px}
+  .ctl.pen{top:12px;right:86px}
+  .ctl.left{bottom:12px;right:86px}
+  .ctl.right{bottom:12px;right:12px}
+  body.editing .tile{outline:3px solid rgba(255,255,255,.6);outline-offset:-3px}
+  body.editing .tile.add{display:none}
+
+  /* ---------- Claude dock on the home page ---------- */
+  .dock{
+    flex:0 0 auto;display:flex;gap:14px;align-items:center;
+    padding:16px var(--gutter);background:var(--bar);border-top:1px solid var(--line);
+  }
+  .dock input{
+    flex:1;min-height:70px;padding:14px 20px;font-size:22px;font-family:inherit;
+    background:#10161f;color:var(--text);border:2px solid var(--line);border-radius:14px;
+  }
+  .dock button{min-height:70px;padding:0 30px;font-size:21px;font-weight:700;--drop:5px}
+  .dock .ask{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .dock .full{background:linear-gradient(180deg,#31404f,#212b38)}
+
+  .answer{
+    flex:0 0 auto;display:none;gap:18px;align-items:flex-start;
+    padding:20px var(--gutter);background:#141c27;border-top:1px solid var(--line);
+    max-height:36vh;overflow-y:auto;
+  }
+  .answer.show{display:flex}
+  .answer .txt{flex:1;font-size:22px;line-height:1.5;white-space:pre-wrap}
+  .answer button{min-height:58px;padding:0 24px;font-size:19px;font-weight:650;--drop:4px;
+    background:linear-gradient(180deg,#31404f,#212b38)}
+
+  /* ---------- full screens ---------- */
+  .appview{position:fixed;inset:0;background:var(--ground);display:none;flex-direction:column;z-index:20}
+  .appview.open{display:flex}
+  .homebar{
+    flex:0 0 auto;height:92px;display:flex;align-items:center;gap:16px;
+    padding:0 20px;background:var(--bar);border-bottom:1px solid var(--line);
+  }
+  .homebtn{
+    min-height:68px;padding:0 38px;font-size:25px;font-weight:750;--drop:5px;
+    background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219;
+  }
+  .apptitle{flex:1;font-size:22px;color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .appview iframe{flex:1;border:none;width:100%;background:#fff}
+  .stuck{
+    flex:0 0 auto;display:none;padding:24px var(--gutter);background:#1c2532;
+    border-bottom:1px solid var(--line);font-size:19px;line-height:1.5;
+  }
+  .stuck.show{display:block}
+  .stuck button{margin-top:16px;min-height:64px;padding:0 28px;font-size:20px;font-weight:650;--drop:4px;
+    background:linear-gradient(180deg,#31404f,#212b38)}
+
+  /* the "it opened in another window" screen */
+  .away{position:fixed;inset:0;background:var(--ground);display:none;flex-direction:column;z-index:25}
+  .away.open{display:flex}
+  .awaybody{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:30px;padding:40px;text-align:center;
+  }
+  .awaybody h2{font-size:40px;font-weight:700;line-height:1.2}
+  .awaybody p{font-size:23px;color:var(--muted);line-height:1.5;max-width:28ch}
+  .awaybtns{display:flex;flex-direction:column;gap:20px;width:min(560px,100%)}
+  .awaybtns button{min-height:96px;font-size:27px;font-weight:700;--drop:6px}
+  .awaybtns .b1{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .awaybtns .b2{background:linear-gradient(180deg,#3aa08c,#237567)}
+  .awaybtns .b3{background:linear-gradient(180deg,#31404f,#212b38)}
+
+  /* ---------- sheets ---------- */
+  .sheet{position:fixed;inset:0;background:rgba(10,14,19,.97);display:none;flex-direction:column;z-index:30}
+  .sheet.open{display:flex}
+  .sheethead{flex:0 0 auto;height:92px;display:flex;align-items:center;gap:20px;padding:0 24px;border-bottom:1px solid var(--line)}
+  .sheethead h2{font-size:26px;font-weight:650}
+  .sheetbody{flex:1;overflow-y:auto;padding:var(--gutter)}
+  .closebtn{min-height:66px;padding:0 32px;font-size:22px;font-weight:700;--drop:5px;
+    background:linear-gradient(180deg,#31404f,#212b38)}
+
+  .picker{display:grid;gap:22px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .pick{min-height:160px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;text-align:left}
+  .pick .glyph{position:relative;z-index:1;width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;background:rgba(0,0,0,.24)}
+  .pick .name{position:relative;z-index:1;font-size:21px;font-weight:650}
+
+  form{max-width:700px;display:flex;flex-direction:column;gap:22px}
+  label{display:flex;flex-direction:column;gap:9px;font-size:19px;color:var(--muted)}
+  input[type=text],input[type=url],input[type=password],textarea{
+    min-height:64px;padding:14px 18px;font-size:21px;font-family:inherit;
+    background:#10161f;color:var(--text);border:2px solid var(--line);border-radius:14px;
+  }
+  textarea{min-height:200px;resize:vertical;font-size:15px;font-family:ui-monospace,Consolas,monospace}
+  .swatches{display:flex;flex-wrap:wrap;gap:14px}
+  .swatch{width:66px;height:66px;border-radius:16px;--drop:4px}
+  .swatch[aria-pressed="true"]{outline:4px solid var(--text);outline-offset:3px}
+  .radios{display:flex;gap:14px;flex-wrap:wrap}
+  .radio{min-height:64px;padding:0 24px;font-size:19px;font-weight:650;--drop:4px;
+    background:linear-gradient(180deg,#242f3d,#18212c)}
+  .radio[aria-pressed="true"]{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .primary{min-height:76px;font-size:24px;font-weight:750;--drop:5px;
+    background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .ghostbtn{min-height:74px;font-size:21px;font-weight:700;--drop:5px;
+    background:linear-gradient(180deg,#31404f,#212b38)}
+  .danger{min-height:110px;font-size:28px;font-weight:750;--drop:7px;
+    background:linear-gradient(180deg,#e05548,#a72e25)}
+  .hint{font-size:17px;color:var(--muted);line-height:1.5;max-width:700px}
+  .alarmwrap{max-width:700px;display:flex;flex-direction:column;gap:22px}
+  .status{font-size:21px;padding:14px 0}
+  .hide{display:none !important}
+
+  /* ---------- chat screen ---------- */
+  .chatlog{flex:1;overflow-y:auto;padding:var(--gutter);display:flex;flex-direction:column;gap:18px}
+  .msg{max-width:52ch;padding:18px 22px;border-radius:20px;font-size:22px;line-height:1.5;white-space:pre-wrap}
+  .msg.me{align-self:flex-end;background:linear-gradient(180deg,#31404f,#242f3d)}
+  .msg.claude{align-self:flex-start;background:#141c27;border:1px solid var(--line)}
+  .msg.ran{align-self:flex-start;background:linear-gradient(180deg,#3aa08c,#237567);font-weight:650}
+  .msg.err{align-self:flex-start;background:#4a2b28;border:1px solid #7a4239}
+  .chips{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:14px;padding:0 var(--gutter) 18px}
+  .chip{min-height:70px;padding:0 28px;font-size:20px;font-weight:700;--drop:5px;
+    background:linear-gradient(180deg,#3aa08c,#237567)}
+  .composer{flex:0 0 auto;display:flex;gap:14px;padding:18px var(--gutter);border-top:1px solid var(--line);background:var(--bar)}
+  .composer input{flex:1;min-height:70px;padding:14px 18px;font-size:22px;font-family:inherit;background:#10161f;color:var(--text);border:2px solid var(--line);border-radius:14px}
+  .composer button{min-height:70px;padding:0 30px;font-size:21px;font-weight:700;--drop:5px;
+    background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .composer button.ghost{background:linear-gradient(180deg,#31404f,#212b38);color:var(--text)}
+  .cmdrow{display:flex;gap:12px;align-items:center}
+  .cmdrow input{min-height:60px;font-size:19px}
+  .cmdrow .nm{flex:0 0 34%}
+  .cmdrow .url{flex:1}
+  .cmdrow button{min-width:66px;min-height:60px;font-size:24px;font-weight:700;--drop:4px;
+    background:linear-gradient(180deg,#8a4139,#5d2b25)}
+
+  .toast{
+    position:fixed;left:50%;bottom:40px;transform:translateX(-50%);
+    background:linear-gradient(180deg,#3aa08c,#237567);
+    font-size:22px;font-weight:650;padding:20px 32px;border-radius:18px;z-index:60;
+    box-shadow:0 12px 34px rgba(0,0,0,.45);max-width:80vw;text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+  <div class="date" id="date"></div>
+  <div class="spacer"></div>
+  <button class="barbtn press" id="editBtn" aria-pressed="false">Edit</button>
+  <button class="barbtn press" id="settingsBtn">Settings</button>
+</div>
+
+<div class="warn" id="warn">
+  This browser is blocking storage, so tiles and settings will not be kept.
+  Open the hub from its own web address, not from inside a preview window.
+</div>
+
+<main class="grid" id="grid"></main>
+
+<div class="answer" id="answer">
+  <div class="txt" id="answerTxt"></div>
+  <button class="press" id="answerClose">Close</button>
+</div>
+
+<div class="dock">
+  <input type="text" id="dockInput" placeholder="Ask Claude, or say lounge lights on" autocomplete="off" aria-label="Ask Claude">
+  <button class="press ask" id="dockAsk">Ask</button>
+  <button class="press full" id="dockFull">Open chat</button>
+</div>
+
+<!-- embedded app -->
+<section class="appview" id="appview" aria-label="Open app">
+  <div class="homebar">
+    <button class="homebtn press" id="homeBtn">Home</button>
+    <div class="apptitle" id="appTitle"></div>
+    <button class="barbtn press" id="newTabBtn">New window</button>
+  </div>
+  <div class="stuck" id="stuck">
+    Still blank? Some websites refuse to open inside another app.
+    <br><button class="press" id="stuckTab">Open it in its own window</button>
+  </div>
+  <iframe id="appFrame" title="App" referrerpolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"></iframe>
+</section>
+
+<!-- opened in another window -->
+<section class="away" id="away" aria-label="Opened in another window">
+  <div class="homebar">
+    <button class="homebtn press" id="awayHome">Home</button>
+    <div class="apptitle">Opened in another window</div>
+  </div>
+  <div class="awaybody">
+    <h2 id="awayName"></h2>
+    <p id="awayWhy"></p>
+    <div class="awaybtns">
+      <button class="press b2" id="awayClose">Close it and come back</button>
+      <button class="press b1" id="awayAgain">Open it again</button>
+      <button class="press b3" id="awayHome2">Just go Home</button>
+    </div>
+  </div>
+</section>
+
+<!-- claude chat -->
+<section class="appview" id="chatview" aria-label="Claude">
+  <div class="homebar">
+    <button class="homebtn press" id="chatHome">Home</button>
+    <div class="apptitle">Claude</div>
+    <button class="barbtn press" id="chatClear">Clear</button>
+  </div>
+  <div class="chatlog" id="chatlog" role="log" aria-live="polite"></div>
+  <div class="chips" id="chips"></div>
+  <div class="composer">
+    <input type="text" id="chatInput" placeholder="Ask anything, or say lounge lights on" autocomplete="off" aria-label="Message">
+    <button class="press ghost" id="chatMic" hidden>Speak</button>
+    <button class="press" id="chatSend">Send</button>
+  </div>
+</section>
+
+<!-- say it aloud -->
+<section class="sheet" id="saySheet" aria-label="Say it aloud">
+  <div class="sheethead">
+    <button class="closebtn press" data-close>Home</button>
+    <h2>Say it aloud</h2>
+  </div>
+  <div class="sheetbody">
+    <form id="sayForm">
+      <label>What should the Echo say?
+        <input type="text" id="sayText" autocomplete="off" placeholder="Please come through when you can">
+      </label>
+      <button type="submit" class="primary press">Speak it</button>
+      <div class="chips" id="sayChips" style="padding:0"></div>
+      <div class="status" id="sayStatus" role="status" aria-live="polite"></div>
+      <p class="hint" id="sayHint"></p>
+    </form>
+  </div>
+</section>
+
+<!-- add app -->
+<section class="sheet" id="addSheet" aria-label="Add an app">
+  <div class="sheethead">
+    <button class="closebtn press" data-close>Home</button>
+    <h2>Add an app</h2>
+  </div>
+  <div class="sheetbody">
+    <div class="picker" id="picker"></div>
+  </div>
+</section>
+
+<!-- custom app -->
+<section class="sheet" id="customSheet" aria-label="Add a custom app">
+  <div class="sheethead">
+    <button class="closebtn press" data-close>Back</button>
+    <h2 id="customTitle">Add your own app</h2>
+  </div>
+  <div class="sheetbody">
+    <form id="customForm">
+      <label>How should it work?
+        <div class="radios" id="cMode">
+          <button type="button" class="radio press" data-mode="embed"   aria-pressed="true">Inside the hub</button>
+          <button type="button" class="radio press" data-mode="tab"     aria-pressed="false">Its own window</button>
+          <button type="button" class="radio press" data-mode="trigger" aria-pressed="false">Press to run (Alexa)</button>
+          <button type="button" class="radio press" data-mode="code"    aria-pressed="false">Paste the code</button>
+        </div>
+      </label>
+      <p class="hint" id="modeHint"></p>
+
+      <label>Name
+        <input type="text" id="cName" required autocomplete="off">
+      </label>
+
+      <label id="urlRow">Web address
+        <input type="url" id="cUrl" placeholder="https://" autocomplete="off">
+      </label>
+
+      <label id="codeRow" class="hide">Paste the whole code here
+        <textarea id="cCode" spellcheck="false" placeholder="&lt;!DOCTYPE html&gt; …"></textarea>
+      </label>
+
+      <label>Icon (one character or emoji)
+        <input type="text" id="cGlyph" maxlength="2" value="◆" autocomplete="off">
+      </label>
+      <label>Colour
+        <div class="swatches" id="cSwatches"></div>
+      </label>
+      <button type="submit" class="primary press" id="cSave">Add app</button>
+      <div class="status" id="customStatus" role="status" aria-live="polite"></div>
+    </form>
+  </div>
+</section>
+
+<!-- alarm -->
+<section class="sheet" id="alarmSheet" aria-label="Alarm">
+  <div class="sheethead">
+    <button class="closebtn press" data-close>Cancel</button>
+    <h2>Alarm</h2>
+  </div>
+  <div class="sheetbody">
+    <div class="alarmwrap">
+      <p class="hint" id="alarmHint"></p>
+      <button class="danger press" id="alarmGo">Sound the alarm</button>
+      <div class="status" id="alarmStatus" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- settings -->
+<section class="sheet" id="settingsSheet" aria-label="Settings">
+  <div class="sheethead">
+    <button class="closebtn press" data-close>Home</button>
+    <h2>Settings</h2>
+  </div>
+  <div class="sheetbody">
+    <form id="settingsForm">
+      <label>Alarm address — the one that wakes the house
+        <input type="url" id="sAlarm" placeholder="https://api-v3.voicemonkey.io/trigger?token=…&amp;device=alarm" autocomplete="off">
+      </label>
+      <label>Speaking address — makes an Echo say whatever you type
+        <input type="url" id="sAlexa" placeholder="https://api-v3.voicemonkey.io/announce?token=…&amp;device=house" autocomplete="off">
+      </label>
+      <p class="hint">Both come from Voice Monkey. Its Playground page builds the address — copy it and paste it here.</p>
+
+      <label>Button sound
+        <div class="radios" id="sSound">
+          <button type="button" class="radio press" data-sound="1" aria-pressed="true">On</button>
+          <button type="button" class="radio press" data-sound="0" aria-pressed="false">Off</button>
+        </div>
+      </label>
+
+      <label>Claude API key
+        <input type="password" id="sKey" placeholder="sk-ant-…" autocomplete="off">
+      </label>
+      <p class="hint">Kept in this browser on this device only. Set a monthly spend limit on the key in your Anthropic console.</p>
+      <label>Claude model
+        <input type="text" id="sModel" placeholder="claude-sonnet-5" autocomplete="off">
+      </label>
+      <label>Alexa buttons — name and address for each one
+        <div id="sCmds" style="display:flex;flex-direction:column;gap:12px"></div>
+      </label>
+      <button type="button" class="ghostbtn press" id="addCmdBtn">Add a button</button>
+      <p class="hint">Give each a plain name — "lounge lights on" — and its Voice Monkey trigger address. They become one-press buttons, and Claude can fire them by name.</p>
+      <label>Tile size
+        <div class="radios" id="sSize">
+          <button type="button" class="radio press" data-size="180" aria-pressed="false">Smaller</button>
+          <button type="button" class="radio press" data-size="210" aria-pressed="true">Standard</button>
+          <button type="button" class="radio press" data-size="270" aria-pressed="false">Larger</button>
+        </div>
+      </label>
+      <button type="submit" class="primary press">Save settings</button>
+      <div class="status" id="settingsStatus" role="status" aria-live="polite"></div>
+      <label>Everything, as text — keep a copy safe, or paste an older copy back in
+        <textarea id="sBackup" spellcheck="false"></textarea>
+      </label>
+      <button type="button" class="ghostbtn press" id="restoreBtn">Restore from the text above</button>
+    </form>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+
+  var COLOURS = ["#2f6fb3","#2e8b7a","#c79a2e","#5c63c4","#3f8f5b","#a8477a","#a95f3c","#4a5a6b"];
+
+  var NO_EMBED = ["google.com","gmail.com","youtube.com","whatsapp.com","amazon.com","amazon.co.uk",
+                  "claude.ai","anthropic.com","x.com","twitter.com","facebook.com","instagram.com",
+                  "icloud.com","outlook.com","live.com","microsoft.com","netflix.com","reddit.com",
+                  "bbc.co.uk","github.com","openai.com","chatgpt.com"];
+
+  var PRESETS = [
+    {name:"Say it aloud", glyph:"❝", url:"__SAY__",   mode:"say",   colour:"#2e8b7a"},
+    {name:"Alarm",        glyph:"◆", url:"__ALARM__", mode:"alarm", colour:"#c6392f"},
+    {name:"Claude",       glyph:"✦", url:"__CHAT__",  mode:"chat",  colour:"#a95f3c"},
+    {name:"Gmail",        glyph:"✉", url:"https://mail.google.com/",     mode:"tab", colour:"#2f6fb3"},
+    {name:"Calendar",     glyph:"▦", url:"https://calendar.google.com/", mode:"tab", colour:"#2e8b7a"},
+    {name:"Drive",        glyph:"⬒", url:"https://drive.google.com/",    mode:"tab", colour:"#c79a2e"},
+    {name:"Google Meet",  glyph:"◉", url:"https://meet.google.com/",     mode:"tab", colour:"#3f8f5b"},
+    {name:"WhatsApp",     glyph:"✆", url:"https://web.whatsapp.com/",    mode:"tab", colour:"#3f8f5b"},
+    {name:"Messages",     glyph:"✱", url:"https://messages.google.com/web", mode:"tab", colour:"#2f6fb3"},
+    {name:"Alexa app",    glyph:"⌂", url:"https://alexa.amazon.co.uk/",  mode:"tab", colour:"#5c63c4"},
+    {name:"Claude (web)", glyph:"✧", url:"https://claude.ai/",           mode:"tab", colour:"#a95f3c"},
+    {name:"YouTube",      glyph:"▶", url:"https://www.youtube.com/",     mode:"tab", colour:"#a8477a"},
+    {name:"Kindle",       glyph:"❏", url:"https://read.amazon.co.uk/",   mode:"tab", colour:"#4a5a6b"},
+    {name:"BBC News",     glyph:"◍", url:"https://www.bbc.co.uk/news",   mode:"tab", colour:"#a8477a"},
+    {name:"Your own app", glyph:"+", url:"__CUSTOM__",                   mode:"custom", colour:"#4a5a6b"}
+  ];
+
+  var DEFAULT_TILES = [
+    {id:"t1", name:"Alarm",        glyph:"◆", url:"__ALARM__", mode:"alarm", colour:"#c6392f"},
+    {id:"t2", name:"Say it aloud", glyph:"❝", url:"__SAY__",   mode:"say",   colour:"#2e8b7a"},
+    {id:"t3", name:"Claude",       glyph:"✦", url:"__CHAT__",  mode:"chat",  colour:"#a95f3c"},
+    {id:"t4", name:"Gmail",        glyph:"✉", url:"https://mail.google.com/",     mode:"tab", colour:"#2f6fb3"},
+    {id:"t5", name:"Calendar",     glyph:"▦", url:"https://calendar.google.com/", mode:"tab", colour:"#2e8b7a"},
+    {id:"t6", name:"Drive",        glyph:"⬒", url:"https://drive.google.com/",    mode:"tab", colour:"#c79a2e"},
+    {id:"t7", name:"WhatsApp",     glyph:"✆", url:"https://web.whatsapp.com/",    mode:"tab", colour:"#3f8f5b"}
+  ];
+
+  var KEY_TILES = "gazehub.tiles.v1";
+  var KEY_SET   = "gazehub.settings.v1";
+
+  /* ---------- storage ---------- */
+  var MEM = {};
+  var STORE_OK = (function(){
+    try{ localStorage.setItem("gazehub.test","1"); localStorage.removeItem("gazehub.test"); return true; }
+    catch(e){ return false; }
+  })();
+  if(!STORE_OK) document.body.classList.add("nostore");
+
+  function clone(v){ return JSON.parse(JSON.stringify(v)); }
+  function load(key, fallback){
+    if(STORE_OK){
+      try{ var raw = localStorage.getItem(key); if(raw) return JSON.parse(raw); }catch(e){}
+      return clone(fallback);
+    }
+    return MEM[key] ? clone(MEM[key]) : clone(fallback);
+  }
+  function put(key, value){
+    if(STORE_OK){
+      try{ localStorage.setItem(key, JSON.stringify(value)); return true; }
+      catch(e){ toast("Storage is full — remove a pasted app to free space."); return false; }
+    }
+    MEM[key] = clone(value);
+    return true;
+  }
+
+  var tiles = load(KEY_TILES, DEFAULT_TILES);
+  var settings = load(KEY_SET, {alarm:"", alexa:"", size:210, key:"", model:"claude-sonnet-5", commands:[], sound:1});
+  if(!settings.commands) settings.commands = [];
+  if(!settings.model) settings.model = "claude-sonnet-5";
+  if(typeof settings.sound === "undefined") settings.sound = 1;
+
+  function saveTiles(){ return put(KEY_TILES, tiles); }
+  function saveSettings(){ return put(KEY_SET, settings); }
+
+  var $ = function(id){ return document.getElementById(id); };
+  var grid = $("grid");
+  var editing = false;
+  var pendingColour = COLOURS[0];
+  var pendingMode = "embed";
+  var editingId = null;
+
+  /* ---------- click sound ---------- */
+  var actx = null;
+  function clack(kind){
+    if(!settings.sound) return;
+    try{
+      if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if(actx.state === "suspended") actx.resume();
+      var t = actx.currentTime;
+
+      var osc = actx.createOscillator();
+      var gain = actx.createGain();
+      var lo = (kind === "big") ? 210 : 330;
+      var hi = (kind === "big") ? 90  : 150;
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(lo, t);
+      osc.frequency.exponentialRampToValueAtTime(hi, t + 0.055);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(kind === "big" ? 0.22 : 0.14, t + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.085);
+      osc.connect(gain); gain.connect(actx.destination);
+      osc.start(t); osc.stop(t + 0.1);
+    }catch(e){}
+  }
+
+  function toast(msg){
+    var old = document.querySelector(".toast");
+    if(old) old.remove();
+    var t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    t.setAttribute("role","status");
+    t.setAttribute("aria-live","polite");
+    document.body.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 3200);
+  }
+
+  function hostOf(url){ try{ return new URL(url).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
+  function blocksEmbed(url){
+    var h = hostOf(url);
+    if(!h) return false;
+    for(var i=0;i<NO_EMBED.length;i++){
+      if(h === NO_EMBED[i] || h.indexOf("." + NO_EMBED[i]) > -1) return true;
+    }
+    return false;
+  }
+
+  /* ---------- rendering ---------- */
+  function render(){
+    document.documentElement.style.setProperty("--tile-min", (settings.size||210)+"px");
+    grid.textContent = "";
+    tiles.forEach(function(tile, i){
+      var btn = document.createElement("button");
+      btn.className = "tile press" + (tile.mode === "alarm" ? " alarm" : "");
+      if(tile.mode !== "alarm") btn.style.backgroundColor = tile.colour || COLOURS[0];
+      btn.setAttribute("data-open", tile.id);
+      var g = document.createElement("span"); g.className = "glyph"; g.textContent = tile.glyph || "◆";
+      var n = document.createElement("span"); n.className = "name"; n.textContent = tile.name;
+      btn.appendChild(g); btn.appendChild(n);
+
+      var del = ctl("del","✕","Remove " + tile.name); del.setAttribute("data-del", tile.id); btn.appendChild(del);
+      var pen = ctl("pen","✎","Change " + tile.name); pen.setAttribute("data-edit", tile.id); btn.appendChild(pen);
+      if(i > 0){
+        var l = ctl("left","◀","Move " + tile.name + " earlier");
+        l.setAttribute("data-move", tile.id); l.setAttribute("data-dir","-1"); btn.appendChild(l);
+      }
+      if(i < tiles.length - 1){
+        var r = ctl("right","▶","Move " + tile.name + " later");
+        r.setAttribute("data-move", tile.id); r.setAttribute("data-dir","1"); btn.appendChild(r);
+      }
+      grid.appendChild(btn);
+    });
+
+    var add = document.createElement("button");
+    add.className = "tile add";
+    add.id = "addTile";
+    var ag = document.createElement("span"); ag.className = "glyph"; ag.textContent = "+";
+    var an = document.createElement("span"); an.className = "name"; an.textContent = "Add an app";
+    add.appendChild(ag); add.appendChild(an);
+    grid.appendChild(add);
+  }
+
+  function ctl(kind,label,aria){
+    var b = document.createElement("span");
+    b.className = "ctl " + kind;
+    b.setAttribute("role","button");
+    b.setAttribute("tabindex","0");
+    b.setAttribute("aria-label",aria);
+    b.textContent = label;
+    return b;
+  }
+
+  /* ---------- opening a tile ---------- */
+  var stuckTimer = null;
+  var currentUrl = "";
+  var awayWin = null;
+  var awayUrl = "";
+
+  function openTile(tile){
+    if(tile.mode === "alarm"){ openSheet("alarmSheet"); return; }
+    if(tile.mode === "chat"){ openChat(); return; }
+    if(tile.mode === "say"){ openSheet("saySheet"); return; }
+
+    if(tile.mode === "trigger"){
+      if(!tile.url){ toast(tile.name + " has no address yet — press Edit, then the pencil."); return; }
+      fire(tile.url);
+      toast("Sent: " + tile.name);
+      return;
+    }
+    if(tile.mode === "code"){ openFrame(tile.name, null, tile.code || ""); return; }
+
+    if(tile.mode === "embed" && !blocksEmbed(tile.url)){
+      openFrame(tile.name, tile.url, null);
+      return;
+    }
+    openAway(tile);
+  }
+
+  /* a site that must live in its own window — the hub stays on this screen,
+     so there is always a way back without hunting through Chrome */
+  function openAway(tile){
+    awayUrl = tile.url;
+    $("awayName").textContent = tile.name;
+    $("awayWhy").textContent = hostOf(tile.url) +
+      " will not run inside another app, so it has its own window. Use the buttons below to come back.";
+    $("away").classList.add("open");
+    try{ awayWin = window.open(tile.url, "hubwin_" + tile.id); }catch(e){ awayWin = null; }
+  }
+
+  $("awayClose").addEventListener("click", function(){
+    try{ if(awayWin && !awayWin.closed) awayWin.close(); }catch(e){}
+    awayWin = null;
+    $("away").classList.remove("open");
+  });
+  $("awayAgain").addEventListener("click", function(){
+    try{
+      if(awayWin && !awayWin.closed){ awayWin.focus(); return; }
+      awayWin = window.open(awayUrl, "_blank");
+    }catch(e){}
+  });
+  function leaveAway(){ $("away").classList.remove("open"); }
+  $("awayHome").addEventListener("click", leaveAway);
+  $("awayHome2").addEventListener("click", leaveAway);
+
+  function openFrame(title, url, code){
+    var f = $("appFrame");
+    $("appTitle").textContent = title;
+    $("stuck").classList.remove("show");
+    currentUrl = url || "";
+    $("newTabBtn").style.display = url ? "" : "none";
+    if(code){ f.removeAttribute("src"); f.srcdoc = code; }
+    else { f.removeAttribute("srcdoc"); f.src = url; }
+    $("appview").classList.add("open");
+    if(stuckTimer) clearTimeout(stuckTimer);
+    if(url) stuckTimer = setTimeout(function(){ $("stuck").classList.add("show"); }, 6000);
+  }
+
+  $("appFrame").addEventListener("load", function(){ if(stuckTimer) clearTimeout(stuckTimer); });
+
+  function goHome(){
+    if(stuckTimer) clearTimeout(stuckTimer);
+    $("appview").classList.remove("open");
+    var f = $("appFrame");
+    f.removeAttribute("srcdoc");
+    f.src = "about:blank";
+  }
+  function openCurrentInTab(){ if(currentUrl){ try{ awayWin = window.open(currentUrl,"_blank"); }catch(e){} } }
+  $("newTabBtn").addEventListener("click", openCurrentInTab);
+  $("stuckTab").addEventListener("click", function(){ openCurrentInTab(); goHome(); });
+
+  /* ---------- sheets ---------- */
+  function openSheet(id){
+    closeSheets();
+    $(id).classList.add("open");
+    if(id === "settingsSheet") fillSettings();
+    if(id === "addSheet") buildPicker();
+    if(id === "saySheet"){
+      setStatus("sayStatus","");
+      $("sayText").value = "";
+      $("sayHint").textContent = settings.alexa
+        ? "Type a sentence and the Echo says it out loud."
+        : "No speaking address saved yet. Open Settings and paste your Voice Monkey announce address.";
+      buildSayChips();
+      $("sayText").focus();
+    }
+    if(id === "alarmSheet"){
+      setStatus("alarmStatus","");
+      $("alarmHint").textContent = settings.alarm
+        ? "This starts your Alexa routine — the announcement on every Echo, the lights, and the message to your carers."
+        : "No alarm address saved yet. Open Settings and paste your Voice Monkey trigger address first.";
+    }
+  }
+  function closeSheets(){
+    var s = document.querySelectorAll(".sheet");
+    for(var i=0;i<s.length;i++) s[i].classList.remove("open");
+  }
+  function setStatus(id,msg){ $(id).textContent = msg; }
+
+  function buildPicker(){
+    var p = $("picker");
+    p.textContent = "";
+    PRESETS.forEach(function(pre){
+      var b = document.createElement("button");
+      b.className = "pick press";
+      b.style.backgroundColor = pre.colour;
+      var g = document.createElement("span"); g.className = "glyph"; g.textContent = pre.glyph;
+      var n = document.createElement("span"); n.className = "name"; n.textContent = pre.name;
+      b.appendChild(g); b.appendChild(n);
+      b.addEventListener("click", function(){
+        if(pre.url === "__CUSTOM__"){ openCustom(null); return; }
+        tiles.push({id:"t"+Date.now(), name:pre.name, glyph:pre.glyph, url:pre.url, mode:pre.mode, colour:pre.colour});
+        saveTiles(); render(); closeSheets();
+        toast("Added " + pre.name);
+      });
+      p.appendChild(b);
+    });
+  }
+
+  /* ---------- custom / edit ---------- */
+  var MODE_HINTS = {
+    embed:   "Opens in the hub with a big Home button on top. Best for your own tools. Big sites refuse this and switch to their own window on their own.",
+    tab:     "Opens in its own window. The hub shows a return screen behind it, so one press brings you back.",
+    trigger: "One press sends the command to Alexa. No screen opens.",
+    code:    "Paste the code Claude gives you and it becomes a tile. Nothing to upload anywhere."
+  };
+
+  function setMode(m){
+    pendingMode = m;
+    var all = $("cMode").querySelectorAll(".radio");
+    for(var i=0;i<all.length;i++) all[i].setAttribute("aria-pressed", all[i].getAttribute("data-mode") === m ? "true":"false");
+    $("modeHint").textContent = MODE_HINTS[m] || "";
+    $("urlRow").classList.toggle("hide", m === "code");
+    $("codeRow").classList.toggle("hide", m !== "code");
+    $("urlRow").firstChild.textContent = (m === "trigger") ? "Voice Monkey trigger address" : "Web address";
+  }
+  $("cMode").addEventListener("click", function(e){
+    var b = e.target.closest(".radio");
+    if(b) setMode(b.getAttribute("data-mode"));
+  });
+
+  function setColour(c){
+    pendingColour = c;
+    var all = $("cSwatches").querySelectorAll(".swatch");
+    for(var j=0;j<all.length;j++) all[j].setAttribute("aria-pressed", all[j].getAttribute("data-colour") === c ? "true":"false");
+  }
+  function buildSwatches(){
+    var wrap = $("cSwatches");
+    wrap.textContent = "";
+    COLOURS.forEach(function(c,i){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "swatch press";
+      b.style.backgroundColor = c;
+      b.setAttribute("data-colour",c);
+      b.setAttribute("aria-label","Colour "+(i+1));
+      b.setAttribute("aria-pressed", i===0 ? "true":"false");
+      b.addEventListener("click", function(){ setColour(c); });
+      wrap.appendChild(b);
+    });
+  }
+
+  function openCustom(tile){
+    editingId = tile ? tile.id : null;
+    $("customTitle").textContent = tile ? "Change this app" : "Add your own app";
+    $("cSave").textContent = tile ? "Save changes" : "Add app";
+    setStatus("customStatus","");
+    $("cName").value  = tile ? (tile.name || "") : "";
+    $("cGlyph").value = tile ? (tile.glyph || "◆") : "◆";
+    $("cUrl").value   = (tile && tile.url && tile.url.indexOf("__") !== 0) ? tile.url : "";
+    $("cCode").value  = tile ? (tile.code || "") : "";
+    setColour((tile && tile.colour) || COLOURS[0]);
+    var m = tile ? tile.mode : "embed";
+    if(["alarm","chat","say"].indexOf(m) > -1) m = "embed";
+    setMode(m);
+    closeSheets();
+    $("customSheet").classList.add("open");
+    $("cName").focus();
+  }
+
+  $("customForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var name = $("cName").value.trim();
+    var url = $("cUrl").value.trim();
+    var code = $("cCode").value;
+    if(!name){ setStatus("customStatus","Give it a name first."); return; }
+    if(pendingMode === "code" && !code.trim()){ setStatus("customStatus","Paste the code first."); return; }
+    if(pendingMode !== "code" && !url){ setStatus("customStatus","Paste the web address first."); return; }
+    if(pendingMode !== "code" && !/^https?:\/\//i.test(url)){
+      setStatus("customStatus","The address needs to start with https://"); return;
+    }
+    var rec = {
+      id: editingId || ("t"+Date.now()),
+      name: name,
+      glyph: ($("cGlyph").value || "◆").trim() || "◆",
+      url: pendingMode === "code" ? "" : url,
+      code: pendingMode === "code" ? code : "",
+      mode: pendingMode,
+      colour: pendingColour
+    };
+    if(editingId){ for(var i=0;i<tiles.length;i++) if(tiles[i].id === editingId) tiles[i] = rec; }
+    else tiles.push(rec);
+    if(!saveTiles()) return;
+    render(); closeSheets();
+    toast(editingId ? "Saved " + name : "Added " + name);
+    editingId = null;
+  });
+
+  /* ---------- settings ---------- */
+  function fillSettings(){
+    $("sAlarm").value = settings.alarm || "";
+    $("sAlexa").value = settings.alexa || "";
+    $("sKey").value = settings.key || "";
+    $("sModel").value = settings.model || "claude-sonnet-5";
+    buildCmdRows();
+    $("sBackup").value = JSON.stringify({tiles:tiles, settings:settings}, null, 1);
+    mark("sSize","data-size", settings.size);
+    mark("sSound","data-sound", settings.sound ? 1 : 0);
+    setStatus("settingsStatus","");
+  }
+  function mark(wrapId, attr, value){
+    var all = $(wrapId).querySelectorAll(".radio");
+    for(var i=0;i<all.length;i++){
+      all[i].setAttribute("aria-pressed", Number(all[i].getAttribute(attr)) === Number(value) ? "true":"false");
+    }
+  }
+
+  $("sSize").addEventListener("click", function(e){
+    var b = e.target.closest(".radio"); if(!b) return;
+    settings.size = Number(b.getAttribute("data-size"));
+    mark("sSize","data-size",settings.size);
+    saveSettings(); render();
+  });
+  $("sSound").addEventListener("click", function(e){
+    var b = e.target.closest(".radio"); if(!b) return;
+    settings.sound = Number(b.getAttribute("data-sound"));
+    mark("sSound","data-sound",settings.sound);
+    saveSettings();
+    if(settings.sound) clack("big");
+  });
+
+  $("settingsForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    settings.alarm = $("sAlarm").value.trim();
+    settings.alexa = $("sAlexa").value.trim();
+    settings.key = $("sKey").value.trim();
+    settings.model = $("sModel").value.trim() || "claude-sonnet-5";
+    readCmdRows();
+    if(saveSettings()){ buildChips(); setStatus("settingsStatus","Saved."); }
+  });
+
+  $("restoreBtn").addEventListener("click", function(){
+    try{
+      var parsed = JSON.parse($("sBackup").value);
+      if(Array.isArray(parsed)) tiles = parsed;
+      else {
+        if(!Array.isArray(parsed.tiles)) throw new Error("bad");
+        tiles = parsed.tiles;
+        if(parsed.settings) settings = parsed.settings;
+      }
+      if(!settings.commands) settings.commands = [];
+      saveTiles(); saveSettings(); render(); buildChips();
+      setStatus("settingsStatus","Restored.");
+    }catch(err){
+      setStatus("settingsStatus","That text isn't a valid backup. Paste the whole thing, including the outer brackets.");
+    }
+  });
+
+  /* ---------- firing an address ---------- */
+  function beacon(url){
+    try{ var i = new Image(); i.src = url + (url.indexOf("?")>-1?"&":"?") + "_t=" + Date.now(); }catch(e){}
+  }
+  function fire(url){
+    try{
+      fetch(url, {method:"GET", mode:"no-cors", cache:"no-store", keepalive:true})
+        .catch(function(){ beacon(url); });
+    }catch(e){ beacon(url); }
+  }
+
+  $("alarmGo").addEventListener("click", function(){
+    if(!settings.alarm){
+      openSheet("settingsSheet");
+      setStatus("settingsStatus","Paste your alarm address, then save.");
+      return;
+    }
+    setStatus("alarmStatus","Sending…");
+    fire(settings.alarm);
+    setTimeout(function(){
+      setStatus("alarmStatus","Alarm sent. Listen for the announcement — if the Echos stay quiet, press again.");
+    }, 700);
+  });
+
+  /* ---------- say it aloud ---------- */
+  var SAY_PRESETS = ["Please come through when you can","I need the suction","Can you turn me","Thank you"];
+
+  function speak(text){
+    text = String(text || "").trim();
+    if(!text) return false;
+    if(!settings.alexa){
+      openSheet("settingsSheet");
+      setStatus("settingsStatus","Paste your speaking address, then save.");
+      return false;
+    }
+    var base = settings.alexa
+      .replace(/([?&])(speech|text|announcement)=[^&]*/gi,"$1")
+      .replace(/[?&]+$/,"").replace(/&&+/g,"&").replace(/\?&/,"?");
+    fire(base + (base.indexOf("?")>-1?"&":"?") + "speech=" + encodeURIComponent(text));
+    return true;
+  }
+
+  function buildSayChips(){
+    var wrap = $("sayChips");
+    wrap.textContent = "";
+    SAY_PRESETS.forEach(function(p){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip press"; b.textContent = p;
+      b.addEventListener("click", function(){ if(speak(p)) setStatus("sayStatus","Said: " + p); });
+      wrap.appendChild(b);
+    });
+  }
+  $("sayForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var t = $("sayText").value;
+    if(speak(t)){ setStatus("sayStatus","Said: " + t.trim()); $("sayText").value = ""; }
+  });
+
+  /* ---------- claude ---------- */
+  var history = [];
+  var busy = false;
+
+  function openChat(){
+    $("chatview").classList.add("open");
+    buildChips();
+    if(!$("chatlog").children.length){
+      if(!settings.key) say("err","No API key saved yet. Open Settings, paste your Claude API key, and save.");
+      else say("claude","Ready. Ask me anything, or press one of the green buttons.");
+    }
+    $("chatInput").focus();
+  }
+  function closeChat(){ $("chatview").classList.remove("open"); }
+
+  function say(kind,text){
+    var d = document.createElement("div");
+    d.className = "msg " + kind;
+    d.textContent = text;
+    var log = $("chatlog");
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+    return d;
+  }
+
+  function buildChips(){
+    var wrap = $("chips");
+    wrap.textContent = "";
+    (settings.commands || []).forEach(function(cmd){
+      if(!cmd.name || !cmd.url) return;
+      var b = document.createElement("button");
+      b.className = "chip press"; b.textContent = cmd.name;
+      b.addEventListener("click", function(){ fire(cmd.url); say("ran","Sent: " + cmd.name); });
+      wrap.appendChild(b);
+    });
+  }
+
+  function runCommand(name){
+    var m = (settings.commands || []).filter(function(c){
+      return c.name && c.name.toLowerCase() === String(name).toLowerCase();
+    })[0];
+    if(!m || !m.url) return false;
+    fire(m.url);
+    return true;
+  }
+
+  function systemPrompt(){
+    var names = (settings.commands||[]).filter(function(c){ return c.name && c.url; })
+                 .map(function(c){ return '"'+c.name+'"'; });
+    return [
+      "You help Carlos, who types with eye-gaze. Every extra word costs him effort to read, so answer in one or two short sentences unless he asks for detail.",
+      names.length ? "You can fire these Alexa buttons: " + names.join(", ") + "." : "No Alexa buttons are set up yet.",
+      settings.alexa ? "You can also make an Echo speak a sentence out loud, which is how he talks to carers in another room."
+                     : "No speaking address is set up, so you cannot make the Echo speak.",
+      "Reply with JSON only, no code fences, no other text:",
+      '{"say": "what to show him", "command": "an Alexa button name or null", "speak": "a sentence for the Echo or null"}',
+      "Use command for device control, matching the closest button name. Use speak only when he wants something said out loud in the house. Set both to null when he is just talking or asking a question.",
+      "If a device request is ambiguous, fire your best guess and say which one you picked, rather than asking him to type more."
+    ].join("\n");
+  }
+
+  /* shared by the chat screen and the box on the home page */
+  function ask(text, onText, onRan, onErr){
+    var direct = text.match(/^(?:say|announce)[\s,:.]+(.+)$/i);
+    if(direct){
+      if(speak(direct[1])) onRan("Said: " + direct[1]);
+      return;
+    }
+    if(!settings.key){ onErr("No API key saved. Open Settings and paste your Claude API key."); return; }
+
+    history.push({role:"user", content:text});
+    if(history.length > 14) history = history.slice(-14);
+    busy = true;
+
+    fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key":settings.key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model: settings.model || "claude-sonnet-5",
+        max_tokens: 700,
+        system: systemPrompt(),
+        messages: history
+      })
+    })
+    .then(function(r){ return r.json().then(function(b){ return {ok:r.ok, body:b}; }); })
+    .then(function(res){
+      busy = false;
+      if(!res.ok){
+        history.pop();
+        onErr((res.body && res.body.error && res.body.error.message) || "The request was refused.");
+        return;
+      }
+      var raw = (res.body.content||[]).filter(function(b){ return b.type==="text"; })
+                 .map(function(b){ return b.text; }).join("\n").trim();
+      history.push({role:"assistant", content:raw});
+
+      var parsed = null;
+      try{ parsed = JSON.parse(raw.replace(/```json|```/g,"").trim()); }catch(e){}
+
+      if(parsed && typeof parsed.say === "string"){
+        onText(parsed.say);
+        if(parsed.speak && speak(parsed.speak)) onRan("Said: " + parsed.speak);
+        if(parsed.command){
+          if(runCommand(parsed.command)) onRan("Sent: " + parsed.command);
+          else onErr("I don't have a button called " + parsed.command + ".");
+        }
+      } else {
+        onText(raw || "No reply came back.");
+      }
+    })
+    .catch(function(){
+      busy = false; history.pop();
+      onErr("Couldn't reach Claude. Check the network and the API key.");
+    });
+  }
+
+  function send(text){
+    if(busy) return;
+    text = (text||"").trim();
+    if(!text) return;
+    say("me", text);
+    $("chatInput").value = "";
+    var pending = null;
+    var isDirect = /^(?:say|announce)[\s,:.]+/i.test(text);
+    if(!isDirect && settings.key) pending = say("claude","…");
+    ask(text,
+      function(t){ if(pending){ pending.textContent = t; } else { say("claude",t); } },
+      function(t){ say("ran",t); },
+      function(t){ if(pending){ pending.className = "msg err"; pending.textContent = t; } else { say("err",t); } }
+    );
+  }
+
+  $("chatSend").addEventListener("click", function(){ send($("chatInput").value); });
+  $("chatInput").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); send(this.value); }
+  });
+  $("chatHome").addEventListener("click", closeChat);
+  $("chatClear").addEventListener("click", function(){
+    history = []; $("chatlog").textContent = ""; say("claude","Cleared.");
+  });
+
+  /* the box on the home page */
+  function showAnswer(text){
+    $("answerTxt").textContent = text;
+    $("answer").classList.add("show");
+  }
+  function dockSend(){
+    var t = $("dockInput").value.trim();
+    if(!t || busy) return;
+    $("dockInput").value = "";
+    var isDirect = /^(?:say|announce)[\s,:.]+/i.test(t);
+    if(!isDirect && settings.key) showAnswer("…");
+    history = history.concat([]);
+    ask(t, showAnswer, function(m){ showAnswer(m); toast(m); }, showAnswer);
+  }
+  $("dockAsk").addEventListener("click", dockSend);
+  $("dockInput").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){ e.preventDefault(); dockSend(); }
+  });
+  $("answerClose").addEventListener("click", function(){ $("answer").classList.remove("show"); });
+  $("dockFull").addEventListener("click", function(){
+    var t = $("dockInput").value.trim();
+    openChat();
+    if(t){ $("dockInput").value = ""; send(t); }
+  });
+
+  /* dictation where available */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR){
+    var mic = $("chatMic");
+    mic.hidden = false;
+    var rec = new SR();
+    rec.lang = "en-GB"; rec.interimResults = false; rec.continuous = false;
+    var listening = false;
+    rec.onresult = function(e){ var t = e.results[0][0].transcript; $("chatInput").value = t; send(t); };
+    rec.onend = function(){ listening = false; mic.textContent = "Speak"; };
+    rec.onerror = function(){ listening = false; mic.textContent = "Speak"; };
+    mic.addEventListener("click", function(){
+      if(listening){ rec.stop(); return; }
+      try{ rec.start(); listening = true; mic.textContent = "Listening…"; }catch(e){}
+    });
+  }
+
+  /* ---------- Alexa button editor ---------- */
+  function buildCmdRows(){
+    var wrap = $("sCmds");
+    wrap.textContent = "";
+    (settings.commands||[]).forEach(function(cmd,i){
+      var row = document.createElement("div");
+      row.className = "cmdrow";
+      var n = document.createElement("input");
+      n.type="text"; n.className="nm"; n.value = cmd.name||"";
+      n.placeholder="lounge lights on"; n.setAttribute("aria-label","Button name "+(i+1));
+      var u = document.createElement("input");
+      u.type="url"; u.className="url"; u.value = cmd.url||"";
+      u.placeholder="https://…"; u.setAttribute("aria-label","Button address "+(i+1));
+      var del = document.createElement("button");
+      del.type="button"; del.className="press"; del.textContent="✕";
+      del.setAttribute("aria-label","Remove button "+(i+1));
+      del.addEventListener("click", function(){
+        readCmdRows();
+        settings.commands.splice(i,1);
+        saveSettings(); buildCmdRows(); buildChips();
+      });
+      row.appendChild(n); row.appendChild(u); row.appendChild(del);
+      wrap.appendChild(row);
+    });
+  }
+  function readCmdRows(){
+    var rows = $("sCmds").querySelectorAll(".cmdrow");
+    var out = [];
+    for(var i=0;i<rows.length;i++){
+      var name = rows[i].querySelector(".nm").value.trim();
+      var url = rows[i].querySelector(".url").value.trim();
+      if(name || url) out.push({name:name, url:url});
+    }
+    settings.commands = out;
+  }
+  $("addCmdBtn").addEventListener("click", function(){
+    readCmdRows();
+    settings.commands.push({name:"",url:""});
+    saveSettings(); buildCmdRows();
+  });
+
+  /* ---------- clicks ---------- */
+  document.addEventListener("pointerdown", function(e){
+    var p = e.target.closest(".press");
+    if(p) clack(p.classList.contains("tile") || p.classList.contains("danger") ? "big" : "small");
+  });
+
+  document.addEventListener("click", function(e){
+    if(e.target.closest("[data-close]")){ closeSheets(); return; }
+    if(e.target.closest("#addTile")){ clack("small"); openSheet("addSheet"); return; }
+
+    var del = e.target.closest("[data-del]");
+    if(del && editing){
+      e.stopPropagation();
+      var did = del.getAttribute("data-del");
+      tiles = tiles.filter(function(t){ return t.id !== did; });
+      saveTiles(); render();
+      return;
+    }
+    var pen = e.target.closest("[data-edit]");
+    if(pen && editing){
+      e.stopPropagation();
+      var t2 = tiles.filter(function(t){ return t.id === pen.getAttribute("data-edit"); })[0];
+      if(t2) openCustom(t2);
+      return;
+    }
+    var mv = e.target.closest("[data-move]");
+    if(mv && editing){
+      e.stopPropagation();
+      var mid = mv.getAttribute("data-move"), dir = Number(mv.getAttribute("data-dir")), idx = -1;
+      for(var i=0;i<tiles.length;i++) if(tiles[i].id === mid) idx = i;
+      var to = idx + dir;
+      if(idx > -1 && to >= 0 && to < tiles.length){
+        var moved = tiles.splice(idx,1)[0];
+        tiles.splice(to,0,moved);
+        saveTiles(); render();
+      }
+      return;
+    }
+    var open = e.target.closest("[data-open]");
+    if(open && !editing){
+      var tile = tiles.filter(function(t){ return t.id === open.getAttribute("data-open"); })[0];
+      if(tile) openTile(tile);
+    }
+  });
+
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Enter" || e.key === " "){
+      var c = e.target.closest(".ctl");
+      if(c){ e.preventDefault(); c.click(); }
+    }
+    if(e.key === "Escape"){ closeSheets(); goHome(); closeChat(); leaveAway(); }
+  });
+
+  $("editBtn").addEventListener("click", function(){
+    editing = !editing;
+    this.setAttribute("aria-pressed", editing ? "true":"false");
+    this.textContent = editing ? "Done" : "Edit";
+    document.body.classList.toggle("editing", editing);
+  });
+  $("settingsBtn").addEventListener("click", function(){ openSheet("settingsSheet"); });
+  $("homeBtn").addEventListener("click", goHome);
+
+  /* ---------- clock ---------- */
+  function tick(){
+    var now = new Date();
+    $("clock").textContent = now.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+    $("date").textContent = now.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  }
+  tick(); setInterval(tick, 15000);
+
+  buildSwatches();
+  setMode("embed");
+  render();
+
+  if("serviceWorker" in navigator && location.protocol === "https:"){
+    window.addEventListener("load", function(){ navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  }
+
+})();
+</script>
+</body>
+</html>
