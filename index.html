@@ -420,16 +420,13 @@
   </div>
   <div class="sheetbody">
     <form id="sayForm">
-      <label>Where should it speak?
-        <div class="radios" id="sayMode">
-          <button type="button" class="radio press" data-saymode="alexa" aria-pressed="true">Alexa speakers</button>
-          <button type="button" class="radio press" data-saymode="pc" aria-pressed="false">This computer</button>
-        </div>
-      </label>
       <label>What should it say?
         <input type="text" id="sayText" autocomplete="off" placeholder="Please come through when you can">
       </label>
-      <button type="submit" class="primary press">Speak it</button>
+      <div class="radios" id="sayMode" style="gap:18px">
+        <button type="button" class="primary press" data-saymode="pc" style="flex:1;min-height:96px;font-size:27px">💻 Speak on computer</button>
+        <button type="button" class="primary press" data-saymode="alexa" style="flex:1;min-height:96px;font-size:27px;background:linear-gradient(180deg,#3aa08c,#237567);color:#fff">🔊 Speak on Alexa</button>
+      </div>
       <div class="chips" id="sayChips" style="padding:0"></div>
       <div class="status" id="sayStatus" role="status" aria-live="polite"></div>
       <p class="hint" id="sayHint"></p>
@@ -599,8 +596,8 @@
   <div class="kbwords" id="kbWords"></div>
   <div class="kbkeys" id="kbKeys"></div>
   <div class="kbacts">
-    <button type="button" class="press go" data-act="speak">Speak</button>
-    <button type="button" class="press echo" data-act="echo">Echo</button>
+    <button type="button" class="press go" data-act="speak">💻 Computer</button>
+    <button type="button" class="press echo" data-act="echo">🔊 Alexa</button>
     <button type="button" class="press" data-act="claude">Ask Claude</button>
     <button type="button" class="press" data-act="email">Email</button>
     <button type="button" class="press" data-act="copy">Copy</button>
@@ -1185,12 +1182,7 @@
   }
 
   function markSay(){
-    var all = $("sayMode").querySelectorAll(".radio");
-    for(var i=0;i<all.length;i++) all[i].setAttribute("aria-pressed", all[i].getAttribute("data-saymode") === settings.sayMode ? "true":"false");
-    $("sayHint").textContent = settings.sayMode === "pc"
-      ? "Type a sentence and this computer says it out loud."
-      : (speakingAddress() ? "Type a sentence and the Echo says it out loud."
-                        : "No speaking address saved yet. Open Settings and paste your Voice Monkey announce address.");
+    $("sayHint").textContent = "The ready phrases speak on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ", the last one you used.";
   }
   function sayOut(text){
     text = String(text || "").trim();
@@ -1199,10 +1191,12 @@
     return speak(text);
   }
   $("sayMode").addEventListener("click", function(e){
-    var b = e.target.closest(".radio"); if(!b) return;
+    var b = e.target.closest("[data-saymode]"); if(!b) return;
     settings.sayMode = b.getAttribute("data-saymode");
     saveSettings(); markSay();
-    if(settings.sayMode === "pc") sayOut("This computer will speak");
+    var t = $("sayText").value.trim();
+    if(!t){ setStatus("sayStatus","Type something first."); return; }
+    if(sayOut(t)){ kbLearn(t, "talk"); setStatus("sayStatus","Said on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ": " + t); $("sayText").value = ""; }
   });
 
 
@@ -1646,8 +1640,7 @@
     }
     box.scrollTop = box.scrollHeight;
     $("kbMode").textContent = "Mode: " + MODE_NAMES[kb.mode];
-    var sp = $("kb").querySelector('[data-act="speak"]');
-    if(sp) sp.textContent = settings.sayMode === "pc" ? "Speak (PC)" : "Speak (Alexa)";
+
   }
 
   /* ---- word row: learned words first, then common English ---- */
@@ -1890,8 +1883,14 @@
       u.lang = "en-GB";
       var v = speechSynthesis.getVoices().filter(function(x){ return /en[-_]GB/i.test(x.lang); })[0];
       if(v) u.voice = v;
-      speechSynthesis.cancel();
-      setTimeout(function(){ try{ speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){} }, 120);
+      window.__hubUtter = u; /* keep a reference so Chrome does not drop it */
+      if(speechSynthesis.speaking || speechSynthesis.pending){
+        speechSynthesis.cancel();
+        setTimeout(function(){ speechSynthesis.speak(u); }, 60);
+      } else {
+        speechSynthesis.resume();
+        speechSynthesis.speak(u);
+      }
       return true;
     }catch(e){ return false; }
   }
@@ -1930,8 +1929,7 @@
     if(!t){ toast("Type something first"); return; }
 
     if(a === "speak"){
-      if(!sayOut(t)) return;
-      toast(settings.sayMode === "pc" ? "Said on this computer" : "Said on the Echo");
+      voiceSpeak(t);
       if(!kb.spoken) kbLearn(t, kb.mode);
       kb.spoken = true;
       kbRefresh();
