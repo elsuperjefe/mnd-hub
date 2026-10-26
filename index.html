@@ -263,6 +263,28 @@
   .cmdrow button{min-width:66px;min-height:60px;font-size:24px;font-weight:700;--drop:4px;
     background:linear-gradient(180deg,#8a4139,#5d2b25)}
 
+  /* ---------- phrase buttons ---------- */
+  #sayForm{max-width:none}
+  #sayForm label,#sayForm .prow,#sayForm #sayMode,#sayForm .pedit{max-width:900px}
+  .phrases{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .phrase{min-height:140px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    text-align:center;font-size:21px;font-weight:700;line-height:1.2;color:#1d2430;background:linear-gradient(180deg,#d9ecff,#b9d6f5)}
+  .phrase .pic{position:relative;z-index:1;font-size:52px;line-height:1}
+  .phrase .pt{position:relative;z-index:1}
+  .phrase:nth-child(4n+2){background:linear-gradient(180deg,#d8f3e6,#b3e2cb)}
+  .phrase:nth-child(4n+3){background:linear-gradient(180deg,#fdebd3,#f6d2a6)}
+  .phrase:nth-child(4n+4){background:linear-gradient(180deg,#ece0fb,#d3c1f2)}
+  .phrase.addp{background:none;border:3px dashed #3b4757;box-shadow:none;color:var(--muted)}
+  .phrase.addp::after{display:none}
+  body.phedit .phrase:not(.addp){outline:4px solid #ffe14d;outline-offset:-4px}
+  .pedit{display:none;flex-direction:column;gap:16px;padding:18px;border:2px solid var(--line);border-radius:18px;background:#141c27}
+  .pedit.open{display:flex}
+  .pics{display:flex;flex-wrap:wrap;gap:10px}
+  .pics button{width:70px;height:70px;font-size:38px;border-radius:16px;background:#202a37;--drop:4px}
+  .pics button[aria-pressed="true"]{outline:4px solid #ffe14d}
+  .prow{display:flex;gap:14px;flex-wrap:wrap}
+  .prow button{flex:1;min-height:76px;font-size:22px;font-weight:700;--drop:5px}
+
   /* ---------- floating keyboard ---------- */
   .kb{
     position:fixed;inset:0;z-index:40;display:none;flex-direction:column;gap:10px;
@@ -427,7 +449,22 @@
         <button type="button" class="primary press" data-saymode="pc" style="flex:1;min-height:96px;font-size:27px">💻 Speak on computer</button>
         <button type="button" class="primary press" data-saymode="alexa" style="flex:1;min-height:96px;font-size:27px;background:linear-gradient(180deg,#3aa08c,#237567);color:#fff">🔊 Speak on Alexa</button>
       </div>
-      <div class="chips" id="sayChips" style="padding:0"></div>
+      <div class="prow">
+        <button type="button" class="press ghostbtn" id="phSave">⭐ Save as phrase</button>
+        <button type="button" class="press ghostbtn" id="phEditBtn">✏️ Change phrases</button>
+      </div>
+      <div class="pedit" id="phEdit">
+        <label>Phrase
+          <input type="text" id="phText" autocomplete="off">
+        </label>
+        <div class="pics" id="phPics"></div>
+        <div class="prow">
+          <button type="button" class="press primary" id="phOk">Save</button>
+          <button type="button" class="press danger" id="phDel" style="min-height:76px;font-size:22px">🗑️ Delete</button>
+          <button type="button" class="press ghostbtn" id="phCancel">Cancel</button>
+        </div>
+      </div>
+      <div class="phrases" id="sayChips"></div>
       <div class="status" id="sayStatus" role="status" aria-live="polite"></div>
       <p class="hint" id="sayHint"></p>
     </form>
@@ -815,7 +852,11 @@
   var awayUrl = "";
 
   function openTile(tile){
-    if(tile.mode === "alarm"){ openSheet("alarmSheet"); return; }
+    if(tile.mode === "alarm"){
+      openSheet("alarmSheet");
+      if(settings.alarm){ $("alarmGo").textContent = "Send again"; $("alarmGo").click(); }
+      return;
+    }
     if(tile.mode === "chat"){ openChat(); return; }
     if(tile.mode === "say"){ openSheet("saySheet"); return; }
 
@@ -1182,7 +1223,7 @@
   }
 
   function markSay(){
-    $("sayHint").textContent = "The ready phrases speak on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ", the last one you used.";
+    $("sayHint").textContent = "Phrases speak on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ", the last one you used.";
   }
   function sayOut(text){
     text = String(text || "").trim();
@@ -1200,16 +1241,95 @@
   });
 
 
+  var PICS = ["🙋","💨","🔄","🙏","🥤","😣","😷","👍","👎","❤️","🛏️","🚽","🌡️","💊","📺","💡","🍽️","☕","🥶","🥵","😴","📞","⏳","😊"];
+  var PIC_WORDS = [["suction","💨"],["turn","🔄"],["thank","🙏"],["drink","🥤"],["water","🥤"],["thirst","🥤"],["pain","😣"],["hurt","😣"],
+    ["mask","😷"],["yes","👍"],["no","👎"],["love","❤️"],["bed","🛏️"],["toilet","🚽"],["hot","🥵"],["cold","🥶"],["tea","☕"],["coffee","☕"],
+    ["eat","🍽️"],["food","🍽️"],["tv","📺"],["light","💡"],["sleep","😴"],["tired","😴"],["phone","📞"],["wait","⏳"],["medic","💊"],["come","🙋"]];
+  function guessPic(t){
+    var low = " " + String(t).toLowerCase() + " ";
+    for(var i=0;i<PIC_WORDS.length;i++) if(low.indexOf(PIC_WORDS[i][0]) > -1) return PIC_WORDS[i][1];
+    return "💬";
+  }
+  if(!Array.isArray(settings.phrases)){
+    settings.phrases = [
+      {t:"Please come through when you can", p:"🙋"},{t:"I need the suction", p:"💨"},{t:"Can you turn me", p:"🔄"},
+      {t:"Can you adjust my mask", p:"😷"},{t:"I would like a drink", p:"🥤"},{t:"I am in pain", p:"😣"},
+      {t:"Yes", p:"👍"},{t:"No", p:"👎"},{t:"Thank you", p:"🙏"},{t:"I love you", p:"❤️"}
+    ];
+    saveSettings();
+  }
+  var phEditing = false, phIndex = -1, phPic = "💬";
+
   function buildSayChips(){
     var wrap = $("sayChips");
     wrap.textContent = "";
-    SAY_PRESETS.forEach(function(p){
+    if(!Array.isArray(settings.phrases)) settings.phrases = [];
+    settings.phrases.forEach(function(ph, i){
       var b = document.createElement("button");
-      b.type = "button"; b.className = "chip press"; b.textContent = p;
-      b.addEventListener("click", function(){ if(sayOut(p)) setStatus("sayStatus","Said: " + p); });
+      b.type = "button"; b.className = "phrase press";
+      var pic = document.createElement("span"); pic.className = "pic"; pic.textContent = ph.p || "💬";
+      var tx = document.createElement("span"); tx.className = "pt"; tx.textContent = ph.t;
+      b.appendChild(pic); b.appendChild(tx);
+      b.addEventListener("click", function(){
+        if(phEditing){ openPhrase(i); return; }
+        if(sayOut(ph.t)) setStatus("sayStatus","Said on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ": " + ph.t);
+      });
       wrap.appendChild(b);
     });
   }
+  function buildPics(){
+    var w = $("phPics"); w.textContent = "";
+    PICS.forEach(function(p){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "press"; b.textContent = p;
+      b.setAttribute("aria-pressed", p === phPic ? "true" : "false");
+      b.addEventListener("click", function(){ phPic = p; buildPics(); });
+      w.appendChild(b);
+    });
+  }
+  function openPhrase(i){
+    phIndex = i;
+    var ph = i > -1 ? settings.phrases[i] : {t:$("sayText").value.trim(), p:guessPic($("sayText").value)};
+    $("phText").value = ph.t; phPic = ph.p || "💬";
+    $("phDel").style.display = i > -1 ? "" : "none";
+    buildPics();
+    $("phEdit").classList.add("open");
+    $("phEdit").scrollIntoView({block:"center"});
+  }
+  function closePhrase(){ $("phEdit").classList.remove("open"); phIndex = -1; }
+  $("phSave").addEventListener("click", function(){
+    var t = $("sayText").value.trim();
+    if(!t){ setStatus("sayStatus","Type the phrase in the box first, then press Save as phrase."); return; }
+    settings.phrases.push({t:t, p:guessPic(t)});
+    saveSettings(); buildSayChips();
+    $("sayText").value = "";
+    setStatus("sayStatus","⭐ Saved: " + t);
+  });
+  $("phEditBtn").addEventListener("click", function(){
+    phEditing = !phEditing;
+    document.body.classList.toggle("phedit", phEditing);
+    this.textContent = phEditing ? "✅ Done changing" : "✏️ Change phrases";
+    setStatus("sayStatus", phEditing ? "Press a phrase to change its words or picture, or delete it." : "");
+    if(!phEditing) closePhrase();
+  });
+  $("phOk").addEventListener("click", function(){
+    var t = $("phText").value.trim();
+    if(!t) return;
+    if(phIndex > -1) settings.phrases[phIndex] = {t:t, p:phPic};
+    else settings.phrases.push({t:t, p:phPic});
+    saveSettings(); buildSayChips(); closePhrase();
+    setStatus("sayStatus","Saved.");
+  });
+  var delArmed = false;
+  $("phDel").addEventListener("click", function(){
+    if(phIndex < 0) return;
+    if(!delArmed){ delArmed = true; this.textContent = "Press again to delete"; var me=this; setTimeout(function(){ delArmed=false; me.textContent="🗑️ Delete"; },4000); return; }
+    delArmed = false; this.textContent = "🗑️ Delete";
+    settings.phrases.splice(phIndex,1);
+    saveSettings(); buildSayChips(); closePhrase();
+    setStatus("sayStatus","Deleted.");
+  });
+  $("phCancel").addEventListener("click", closePhrase);
   $("sayForm").addEventListener("submit", function(e){
     e.preventDefault();
     var t = $("sayText").value;
