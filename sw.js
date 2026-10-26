@@ -2,7 +2,7 @@
    Network first, cache as backup — so an edited index.html shows up next time
    you open the app, but the hub still opens with no internet. */
 
-var CACHE = "hub-v1";
+var CACHE = "hub-v2";
 var SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", function(e){
@@ -28,7 +28,7 @@ self.addEventListener("fetch", function(e){
   if(new URL(req.url).origin !== self.location.origin) return;
 
   e.respondWith(
-    fetch(req).then(function(res){
+    fetch(req, {cache:"no-store"}).then(function(res){
       var copy = res.clone();
       caches.open(CACHE).then(function(c){ c.put(req, copy); });
       return res;
