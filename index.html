@@ -689,6 +689,14 @@
     if(typeof settings.alarm !== "string") settings.alarm = "";
     if(typeof settings.alexa !== "string") settings.alexa = "";
     if(typeof settings.key !== "string") settings.key = "";
+    /* tidy pasted addresses: strip stray quotes/spaces, and swap if the
+       speaking (announce) and alarm (trigger) addresses went in the wrong boxes */
+    function tidy(u){ return String(u||"").trim().replace(/&amp;/g,"&").replace(/^['"\s]+|['"\s]+$/g,"").replace(/['"]+(?=&|$)/g,""); }
+    settings.alarm = tidy(settings.alarm);
+    settings.alexa = tidy(settings.alexa);
+    if(/\/announce\b/i.test(settings.alarm) && !/\/announce\b/i.test(settings.alexa)){
+      var sw = settings.alarm; settings.alarm = settings.alexa; settings.alexa = sw;
+    }
     var k = settings.kb || {};
     if(settings.sayMode !== "pc") settings.sayMode = "alexa";
     if(typeof settings.speaker !== "string" || !settings.speaker) settings.speaker = "kitchen-echo";
