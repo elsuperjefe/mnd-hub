@@ -82,6 +82,8 @@
     font-size:20px;font-weight:650;--drop:4px;
   }
   .barbtn[aria-pressed="true"]{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .kbbtn{background:linear-gradient(180deg,#7c84e6,#4f56b8);white-space:nowrap}
+  .sheethead .kbbtn{margin-left:auto}
 
   .warn{
     flex:0 0 auto;display:none;padding:14px 24px;background:#4a2b28;
@@ -219,6 +221,8 @@
     background:#10161f;color:var(--text);border:2px solid var(--line);border-radius:14px;
   }
   textarea{min-height:200px;resize:vertical;font-size:15px;font-family:ui-monospace,Consolas,monospace}
+  textarea.plain{font-family:inherit;font-size:18px;line-height:1.45}
+  .sethead{font-size:24px;font-weight:650;margin-top:14px;padding-top:18px;border-top:1px solid var(--line)}
   .swatches{display:flex;flex-wrap:wrap;gap:14px}
   .swatch{width:66px;height:66px;border-radius:16px;--drop:4px}
   .swatch[aria-pressed="true"]{outline:4px solid var(--text);outline-offset:3px}
@@ -258,6 +262,67 @@
   .cmdrow .url{flex:1}
   .cmdrow button{min-width:66px;min-height:60px;font-size:24px;font-weight:700;--drop:4px;
     background:linear-gradient(180deg,#8a4139,#5d2b25)}
+
+  /* ---------- floating keyboard ---------- */
+  .kb{
+    position:fixed;inset:0;z-index:40;display:none;flex-direction:column;gap:10px;
+    padding:12px 14px 16px;background:rgba(11,15,21,.985);
+  }
+  .kb.open{display:flex}
+  .kb .press{--drop:4px}
+  .kbtop{flex:0 0 auto;display:flex;gap:12px;min-height:116px}
+  .kbtext{
+    flex:1;min-width:0;max-height:24vh;overflow-y:auto;padding:14px 18px;
+    font-size:28px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere;
+    background:#10161f;border:3px solid var(--key);border-radius:16px;
+  }
+  .kbtext .ph{color:var(--muted)}
+  .kbtext .done{opacity:.55}
+  .caret{display:inline-block;width:3px;height:1.05em;background:var(--key);vertical-align:-0.15em;margin:0 2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .kbside{flex:0 0 auto;display:flex;flex-direction:column;gap:10px;width:clamp(130px,15vw,210px)}
+  .kbside button{flex:1;min-height:52px;font-size:20px;font-weight:700;background:linear-gradient(180deg,#31404f,#212b38)}
+  .kbside .hidekb{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .kbsent{flex:0 0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .sent{
+    min-height:60px;padding:8px 16px;font-size:20px;line-height:1.25;text-align:left;
+    display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#3aa08c,#237567);
+  }
+  .sent.local{background:linear-gradient(180deg,#3c4f63,#2a3848)}
+  .sent .tag{position:relative;z-index:1;flex:0 0 auto;font-size:22px;opacity:.9}
+  .sent .st{position:relative;z-index:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .sent.empty{background:none;border:2px dashed #3b4757;box-shadow:none;color:var(--muted);cursor:default;font-size:18px;border-radius:18px}
+  .kbwords{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+  .word{min-height:58px;padding:0 8px;font-size:23px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background:linear-gradient(180deg,#5c63c4,#454aa0)}
+  .word.blank{visibility:hidden}
+  .kbkeys{flex:1 1 auto;min-height:0;display:grid;grid-template-rows:repeat(4,minmax(48px,1fr));gap:10px}
+  .kbrow{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:10px;min-height:0}
+  .key{min-width:0;padding:0;font-size:27px;font-weight:650;background:linear-gradient(180deg,#31404f,#212b38)}
+  .key.fn{font-size:19px;background:linear-gradient(180deg,#242f3d,#18212c)}
+  .key.on{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .kbacts{flex:0 0 auto;display:flex;gap:10px}
+  .kbacts button{flex:1;min-height:64px;padding:0 8px;font-size:20px;font-weight:700;background:linear-gradient(180deg,#31404f,#212b38)}
+  .kbacts .go{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
+  .kbacts .echo{background:linear-gradient(180deg,#3aa08c,#237567)}
+  .kb .dwelling::before{
+    content:"";position:absolute;left:0;bottom:0;height:7px;width:0;z-index:3;
+    background:#ffffff;border-radius:0 0 0 18px;animation:dwellfill var(--dwell,1000ms) linear forwards;
+  }
+  @keyframes dwellfill{to{width:100%}}
+  @media (max-height:700px){
+    .kb{gap:7px;padding:8px 10px 10px}
+    .kbtop{min-height:92px}
+    .kbtext{font-size:24px}
+    .kbkeys,.kbrow,.kbsent,.kbwords,.kbacts{gap:7px}
+  }
+  @media (max-width:700px){
+    .key{font-size:19px}.key.fn{font-size:14px}
+    .kbrow,.kbkeys{gap:5px}
+    .kbacts{flex-wrap:wrap}.kbacts button{flex:1 1 30%;font-size:17px}
+    .kbwords{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .kbsent{grid-template-columns:1fr}
+  }
 
   .toast{
     position:fixed;left:50%;bottom:40px;transform:translateX(-50%);
@@ -353,7 +418,13 @@
   </div>
   <div class="sheetbody">
     <form id="sayForm">
-      <label>What should the Echo say?
+      <label>Where should it speak?
+        <div class="radios" id="sayMode">
+          <button type="button" class="radio press" data-saymode="alexa" aria-pressed="true">Alexa speakers</button>
+          <button type="button" class="radio press" data-saymode="pc" aria-pressed="false">This computer</button>
+        </div>
+      </label>
+      <label>What should it say?
         <input type="text" id="sayText" autocomplete="off" placeholder="Please come through when you can">
       </label>
       <button type="submit" class="primary press">Speak it</button>
@@ -446,6 +517,9 @@
       <label>Speaking address — makes an Echo say whatever you type
         <input type="url" id="sAlexa" placeholder="https://api-v3.voicemonkey.io/announce?token=…&amp;device=house" autocomplete="off">
       </label>
+      <label>Echo speaker name in Voice Monkey (used when the speaking address is empty)
+        <input type="text" id="sSpeaker" placeholder="kitchen-echo" autocomplete="off">
+      </label>
       <p class="hint">Both come from Voice Monkey. Its Playground page builds the address — copy it and paste it here.</p>
 
       <label>Button sound
@@ -474,6 +548,32 @@
           <button type="button" class="radio press" data-size="270" aria-pressed="false">Larger</button>
         </div>
       </label>
+
+      <h3 class="sethead">Keyboard</h3>
+      <label>Whole-sentence ideas from Claude
+        <div class="radios" id="sKbAi">
+          <button type="button" class="radio press" data-kbai="1" aria-pressed="true">On</button>
+          <button type="button" class="radio press" data-kbai="0" aria-pressed="false">Off</button>
+        </div>
+      </label>
+      <label>Look-to-press inside the keyboard
+        <div class="radios" id="sDwell">
+          <button type="button" class="radio press" data-dwell="0"    aria-pressed="true">Off</button>
+          <button type="button" class="radio press" data-dwell="600"  aria-pressed="false">Quick</button>
+          <button type="button" class="radio press" data-dwell="1000" aria-pressed="false">Normal</button>
+          <button type="button" class="radio press" data-dwell="1500" aria-pressed="false">Slow</button>
+        </div>
+      </label>
+      <p class="hint">Leave this Off if Windows Eye Control or your eye-gaze software already clicks for you, otherwise keys would press twice.</p>
+      <label>Model for sentence ideas
+        <input type="text" id="sKbModel" placeholder="claude-haiku-4-5-20251001" autocomplete="off">
+      </label>
+      <label>Teach it how you write — paste some of your emails or messages
+        <textarea id="sStyle" class="plain" spellcheck="false"></textarea>
+      </label>
+      <button type="button" class="ghostbtn press" id="learnStyleBtn">Learn from this text</button>
+      <button type="button" class="ghostbtn press" id="forgetBtn">Forget what the keyboard has learned</button>
+
       <button type="submit" class="primary press">Save settings</button>
       <div class="status" id="settingsStatus" role="status" aria-live="polite"></div>
       <label>Everything, as text — keep a copy safe, or paste an older copy back in
@@ -484,11 +584,35 @@
   </div>
 </section>
 
+<!-- floating keyboard -->
+<section class="kb" id="kb" aria-label="Keyboard">
+  <div class="kbtop">
+    <div class="kbtext" id="kbText" role="textbox" aria-readonly="true" aria-label="What you are writing"></div>
+    <div class="kbside">
+      <button type="button" class="press hidekb" data-act="hide">Hide</button>
+      <button type="button" class="press" data-act="mode" id="kbMode">Talk</button>
+    </div>
+  </div>
+  <div class="kbsent" id="kbSent"></div>
+  <div class="kbwords" id="kbWords"></div>
+  <div class="kbkeys" id="kbKeys"></div>
+  <div class="kbacts">
+    <button type="button" class="press go" data-act="speak">Speak</button>
+    <button type="button" class="press echo" data-act="echo">Echo</button>
+    <button type="button" class="press" data-act="claude">Ask Claude</button>
+    <button type="button" class="press" data-act="email">Email</button>
+    <button type="button" class="press" data-act="copy">Copy</button>
+    <button type="button" class="press" data-act="insert" id="kbInsert" hidden>Put in box</button>
+    <button type="button" class="press" data-act="clear">Clear</button>
+  </div>
+</section>
+
 <script>
 (function(){
   "use strict";
 
   var COLOURS = ["#2f6fb3","#2e8b7a","#c79a2e","#5c63c4","#3f8f5b","#a8477a","#a95f3c","#4a5a6b"];
+  var KB_MODEL = "claude-haiku-4-5-20251001";
 
   var NO_EMBED = ["google.com","gmail.com","youtube.com","whatsapp.com","amazon.com","amazon.co.uk",
                   "claude.ai","anthropic.com","x.com","twitter.com","facebook.com","instagram.com",
@@ -525,6 +649,7 @@
 
   var KEY_TILES = "gazehub.tiles.v1";
   var KEY_SET   = "gazehub.settings.v1";
+  var KEY_KB    = "gazehub.kb.v1";
 
   /* ---------- storage ---------- */
   var MEM = {};
@@ -552,10 +677,27 @@
   }
 
   var tiles = load(KEY_TILES, DEFAULT_TILES);
-  var settings = load(KEY_SET, {alarm:"", alexa:"", size:210, key:"", model:"claude-sonnet-5", commands:[], sound:1});
-  if(!settings.commands) settings.commands = [];
-  if(!settings.model) settings.model = "claude-sonnet-5";
-  if(typeof settings.sound === "undefined") settings.sound = 1;
+  var settings = load(KEY_SET, {});
+  function normSettings(){
+    if(!settings || typeof settings !== "object") settings = {};
+    if(!settings.commands) settings.commands = [];
+    if(!settings.model) settings.model = "claude-sonnet-5";
+    if(typeof settings.sound === "undefined") settings.sound = 1;
+    if(!settings.size) settings.size = 210;
+    if(typeof settings.alarm !== "string") settings.alarm = "";
+    if(typeof settings.alexa !== "string") settings.alexa = "";
+    if(typeof settings.key !== "string") settings.key = "";
+    var k = settings.kb || {};
+    if(settings.sayMode !== "pc") settings.sayMode = "alexa";
+    if(typeof settings.speaker !== "string" || !settings.speaker) settings.speaker = "kitchen-echo";
+    settings.kb = {
+      ai: (typeof k.ai === "undefined") ? 1 : Number(k.ai),
+      model: k.model || KB_MODEL,
+      dwell: Number(k.dwell) || 0,
+      style: k.style || ""
+    };
+  }
+  normSettings();
 
   function saveTiles(){ return put(KEY_TILES, tiles); }
   function saveSettings(){ return put(KEY_SET, settings); }
@@ -684,8 +826,6 @@
     openAway(tile);
   }
 
-  /* a site that must live in its own window — the hub stays on this screen,
-     so there is always a way back without hunting through Chrome */
   function openAway(tile){
     awayUrl = tile.url;
     $("awayName").textContent = tile.name;
@@ -745,9 +885,7 @@
     if(id === "saySheet"){
       setStatus("sayStatus","");
       $("sayText").value = "";
-      $("sayHint").textContent = settings.alexa
-        ? "Type a sentence and the Echo says it out loud."
-        : "No speaking address saved yet. Open Settings and paste your Voice Monkey announce address.";
+      markSay();
       buildSayChips();
       $("sayText").focus();
     }
@@ -877,11 +1015,16 @@
     $("sAlarm").value = settings.alarm || "";
     $("sAlexa").value = settings.alexa || "";
     $("sKey").value = settings.key || "";
+    $("sSpeaker").value = settings.speaker || "";
     $("sModel").value = settings.model || "claude-sonnet-5";
+    $("sKbModel").value = settings.kb.model || KB_MODEL;
+    $("sStyle").value = settings.kb.style || "";
     buildCmdRows();
-    $("sBackup").value = JSON.stringify({tiles:tiles, settings:settings}, null, 1);
+    $("sBackup").value = JSON.stringify({tiles:tiles, settings:settings, kb:corpus}, null, 1);
     mark("sSize","data-size", settings.size);
     mark("sSound","data-sound", settings.sound ? 1 : 0);
+    mark("sKbAi","data-kbai", settings.kb.ai ? 1 : 0);
+    mark("sDwell","data-dwell", settings.kb.dwell);
     setStatus("settingsStatus","");
   }
   function mark(wrapId, attr, value){
@@ -904,13 +1047,28 @@
     saveSettings();
     if(settings.sound) clack("big");
   });
+  $("sKbAi").addEventListener("click", function(e){
+    var b = e.target.closest(".radio"); if(!b) return;
+    settings.kb.ai = Number(b.getAttribute("data-kbai"));
+    mark("sKbAi","data-kbai",settings.kb.ai);
+    saveSettings();
+  });
+  $("sDwell").addEventListener("click", function(e){
+    var b = e.target.closest(".radio"); if(!b) return;
+    settings.kb.dwell = Number(b.getAttribute("data-dwell"));
+    mark("sDwell","data-dwell",settings.kb.dwell);
+    saveSettings();
+  });
 
   $("settingsForm").addEventListener("submit", function(e){
     e.preventDefault();
     settings.alarm = $("sAlarm").value.trim();
     settings.alexa = $("sAlexa").value.trim();
     settings.key = $("sKey").value.trim();
+    settings.speaker = $("sSpeaker").value.trim() || "kitchen-echo";
     settings.model = $("sModel").value.trim() || "claude-sonnet-5";
+    settings.kb.model = $("sKbModel").value.trim() || KB_MODEL;
+    settings.kb.style = $("sStyle").value.trim().slice(0,8000);
     readCmdRows();
     if(saveSettings()){ buildChips(); setStatus("settingsStatus","Saved."); }
   });
@@ -923,13 +1081,43 @@
         if(!Array.isArray(parsed.tiles)) throw new Error("bad");
         tiles = parsed.tiles;
         if(parsed.settings) settings = parsed.settings;
+        if(Array.isArray(parsed.kb)){ corpus = parsed.kb; put(KEY_KB, corpus); rebuildCounts(); aiCache = {}; }
       }
-      if(!settings.commands) settings.commands = [];
+      normSettings();
       saveTiles(); saveSettings(); render(); buildChips();
       setStatus("settingsStatus","Restored.");
     }catch(err){
       setStatus("settingsStatus","That text isn't a valid backup. Paste the whole thing, including the outer brackets.");
     }
+  });
+
+  $("learnStyleBtn").addEventListener("click", function(){
+    var txt = $("sStyle").value.trim();
+    if(!txt){ setStatus("settingsStatus","Paste some of your writing first."); return; }
+    settings.kb.style = txt.slice(0,8000);
+    saveSettings();
+    var n = 0;
+    txt.split(/\n\s*\n/).forEach(function(p){
+      p = p.replace(/\s+/g," ").trim();
+      if(p.length > 1){ kbLearn(p, "email"); n++; }
+    });
+    aiCache = {};
+    setStatus("settingsStatus","Learned from " + n + " pieces of your writing.");
+  });
+
+  var forgetArmed = false;
+  $("forgetBtn").addEventListener("click", function(){
+    var b = this;
+    if(!forgetArmed){
+      forgetArmed = true;
+      b.textContent = "Press again to forget everything it learned";
+      setTimeout(function(){ forgetArmed = false; b.textContent = "Forget what the keyboard has learned"; }, 5000);
+      return;
+    }
+    forgetArmed = false;
+    corpus = []; put(KEY_KB, corpus); rebuildCounts(); aiCache = {}; lastAI = null;
+    b.textContent = "Forget what the keyboard has learned";
+    setStatus("settingsStatus","The keyboard has forgotten what it learned.");
   });
 
   /* ---------- firing an address ---------- */
@@ -959,20 +1147,50 @@
   /* ---------- say it aloud ---------- */
   var SAY_PRESETS = ["Please come through when you can","I need the suction","Can you turn me","Thank you"];
 
+  /* the speaking address: the one saved in Settings, or else built from the
+     alarm address (same Voice Monkey token) plus the speaker's name */
+  function speakingAddress(){
+    if(settings.alexa) return settings.alexa;
+    var m = (settings.alarm || "").match(/[?&]token=([^&]+)/);
+    if(!m) return "";
+    return "https://api-v3.voicemonkey.io/announce?token=" + m[1] + "&device=" + encodeURIComponent(settings.speaker || "kitchen-echo");
+  }
   function speak(text){
     text = String(text || "").trim();
     if(!text) return false;
-    if(!settings.alexa){
+    var addr = speakingAddress();
+    if(!addr){
       openSheet("settingsSheet");
-      setStatus("settingsStatus","Paste your speaking address, then save.");
+      setStatus("settingsStatus","Paste your alarm address first, then save.");
       return false;
     }
-    var base = settings.alexa
+    var base = addr
       .replace(/([?&])(speech|text|announcement)=[^&]*/gi,"$1")
       .replace(/[?&]+$/,"").replace(/&&+/g,"&").replace(/\?&/,"?");
     fire(base + (base.indexOf("?")>-1?"&":"?") + "speech=" + encodeURIComponent(text));
     return true;
   }
+
+  function markSay(){
+    var all = $("sayMode").querySelectorAll(".radio");
+    for(var i=0;i<all.length;i++) all[i].setAttribute("aria-pressed", all[i].getAttribute("data-saymode") === settings.sayMode ? "true":"false");
+    $("sayHint").textContent = settings.sayMode === "pc"
+      ? "Type a sentence and this computer says it out loud."
+      : (speakingAddress() ? "Type a sentence and the Echo says it out loud."
+                        : "No speaking address saved yet. Open Settings and paste your Voice Monkey announce address.");
+  }
+  function sayOut(text){
+    text = String(text || "").trim();
+    if(!text) return false;
+    if(settings.sayMode === "pc") return voiceSpeak(text);
+    return speak(text);
+  }
+  $("sayMode").addEventListener("click", function(e){
+    var b = e.target.closest(".radio"); if(!b) return;
+    settings.sayMode = b.getAttribute("data-saymode");
+    saveSettings(); markSay();
+    if(settings.sayMode === "pc") sayOut("This computer will speak");
+  });
 
   function buildSayChips(){
     var wrap = $("sayChips");
@@ -980,14 +1198,14 @@
     SAY_PRESETS.forEach(function(p){
       var b = document.createElement("button");
       b.type = "button"; b.className = "chip press"; b.textContent = p;
-      b.addEventListener("click", function(){ if(speak(p)) setStatus("sayStatus","Said: " + p); });
+      b.addEventListener("click", function(){ if(sayOut(p)) setStatus("sayStatus","Said: " + p); });
       wrap.appendChild(b);
     });
   }
   $("sayForm").addEventListener("submit", function(e){
     e.preventDefault();
     var t = $("sayText").value;
-    if(speak(t)){ setStatus("sayStatus","Said: " + t.trim()); $("sayText").value = ""; }
+    if(sayOut(t)){ kbLearn(t, "talk"); setStatus("sayStatus","Said: " + t.trim()); $("sayText").value = ""; }
   });
 
   /* ---------- claude ---------- */
@@ -1042,7 +1260,7 @@
     return [
       "You help Carlos, who types with eye-gaze. Every extra word costs him effort to read, so answer in one or two short sentences unless he asks for detail.",
       names.length ? "You can fire these Alexa buttons: " + names.join(", ") + "." : "No Alexa buttons are set up yet.",
-      settings.alexa ? "You can also make an Echo speak a sentence out loud, which is how he talks to carers in another room."
+      speakingAddress() ? "You can also make an Echo speak a sentence out loud, which is how he talks to carers in another room."
                      : "No speaking address is set up, so you cannot make the Echo speak.",
       "Reply with JSON only, no code fences, no other text:",
       '{"say": "what to show him", "command": "an Alexa button name or null", "speak": "a sentence for the Echo or null"}',
@@ -1051,7 +1269,6 @@
     ].join("\n");
   }
 
-  /* shared by the chat screen and the box on the home page */
   function ask(text, onText, onRan, onErr){
     var direct = text.match(/^(?:say|announce)[\s,:.]+(.+)$/i);
     if(direct){
@@ -1116,6 +1333,7 @@
     text = (text||"").trim();
     if(!text) return;
     say("me", text);
+    kbLearn(text, "claude");
     $("chatInput").value = "";
     var pending = null;
     var isDirect = /^(?:say|announce)[\s,:.]+/i.test(text);
@@ -1136,7 +1354,6 @@
     history = []; $("chatlog").textContent = ""; say("claude","Cleared.");
   });
 
-  /* the box on the home page */
   function showAnswer(text){
     $("answerTxt").textContent = text;
     $("answer").classList.add("show");
@@ -1145,9 +1362,9 @@
     var t = $("dockInput").value.trim();
     if(!t || busy) return;
     $("dockInput").value = "";
+    kbLearn(t, "claude");
     var isDirect = /^(?:say|announce)[\s,:.]+/i.test(t);
     if(!isDirect && settings.key) showAnswer("…");
-    history = history.concat([]);
     ask(t, showAnswer, function(m){ showAnswer(m); toast(m); }, showAnswer);
   }
   $("dockAsk").addEventListener("click", dockSend);
@@ -1161,7 +1378,6 @@
     if(t){ $("dockInput").value = ""; send(t); }
   });
 
-  /* dictation where available */
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(SR){
     var mic = $("chatMic");
@@ -1219,6 +1435,620 @@
     saveSettings(); buildCmdRows();
   });
 
+  /* ================================================================
+     KEYBOARD — floats over everything, learns how Carlos writes.
+     Two kinds of learning:
+       1. On this device: every message he sends is kept, so the word row
+          learns his words and word pairs, and his past sentences come back
+          as one-press suggestions (grey ones, marked ↺).
+       2. Claude: his recent messages are sent as examples so it can
+          suggest whole sentences in his own style (green ones, marked ✦).
+     ================================================================ */
+  var corpus = load(KEY_KB, []);
+  if(!Array.isArray(corpus)) corpus = [];
+  var uni = {}, bi = {};
+
+  var BASE_LIST = ("i you the to and a it is that of in for my me have be can please not this on with do are we but just " +
+    "will what so like your get know if all at was think go about need want it's i'm don't can't thank thanks yes no okay " +
+    "good really now when up out today tomorrow would could should there how one more some see they them their he she his " +
+    "her our us from been had has much very well also back then here make take come going sorry love later morning night " +
+    "help call email message send let's new work day week things right still because said say tell ask look feel tired fine " +
+    "great sure maybe something anything nothing who where why which bed chair turn suction water drink mask cough pain " +
+    "cold hot hungry doctor nurse appointment lights music phone laptop open close wait stop start again minute minutes hour " +
+    "time little bit lot best hope soon next last nice happy family friend kind regards hi hello dear afternoon evening").split(" ");
+
+  function tokens(s){ return (String(s).toLowerCase().match(/[a-z0-9']+/g) || []); }
+  function countIn(text, w){
+    var t = tokens(text);
+    for(var i=0;i<t.length;i++){
+      uni[t[i]] = (uni[t[i]]||0) + w;
+      if(i > 0){
+        var p = t[i-1];
+        if(!bi[p]) bi[p] = {};
+        bi[p][t[i]] = (bi[p][t[i]]||0) + w;
+      }
+    }
+  }
+  function rebuildCounts(){
+    uni = {}; bi = {};
+    corpus.forEach(function(e){ if(!e.w) countIn(e.t, e.n || 1); });
+  }
+  function score(e){
+    var days = (Date.now() - (e.d||0)) / 864e5;
+    return (e.n||1) / (1 + days/30);
+  }
+  function upsert(t, m, whole){
+    var low = t.toLowerCase();
+    for(var i=0;i<corpus.length;i++){
+      if(corpus[i].t.toLowerCase() === low){ corpus[i].n = (corpus[i].n||1) + 1; corpus[i].d = Date.now(); corpus[i].m = m; return; }
+    }
+    corpus.push({t:t, n:1, d:Date.now(), m:m || "talk", w: whole ? 1 : 0});
+  }
+  function kbLearn(text, mode){
+    text = String(text || "").replace(/[ \t]+/g," ").trim();
+    if(text.length < 2) return;
+    var flat = text.replace(/\s+/g," ");
+    var sents = (flat.match(/[^.!?]+[.!?]*/g) || [flat])
+                  .map(function(s){ return s.trim(); })
+                  .filter(function(s){ return s.length > 1; });
+    sents.forEach(function(s){ upsert(s, mode, false); countIn(s, 1); });
+    if(sents.length > 1) upsert(text, mode, true);
+    if(corpus.length > 1000){
+      corpus.sort(function(a,b){ return score(b) - score(a); });
+      corpus = corpus.slice(0, 900);
+      rebuildCounts();
+    }
+    put(KEY_KB, corpus);
+  }
+
+  var MODES = ["talk","email","claude"];
+  var MODE_NAMES = {talk:"Talk", email:"Email", claude:"Claude"};
+  var kb = {text:"", undo:[], shift:false, num:false, mode:"talk", spoken:false, target:null, sentList:[]};
+
+  function ctxText(){ return kb.spoken ? "" : kb.text; }
+  function atStart(t){ return !t.trim() || /[.!?\n]\s*$/.test(t); }
+  function splitCur(t){
+    var m = t.match(/^([\s\S]*[.!?\n]\s*)?([\s\S]*)$/);
+    return {pre: m[1] || "", cur: m[2] || ""};
+  }
+
+  /* every change goes through here, so Undo always works */
+  function edit(fn, newContent){
+    kb.undo.push(kb.text);
+    if(kb.undo.length > 60) kb.undo.shift();
+    if(newContent && kb.spoken) kb.text = "";
+    kb.spoken = false;
+    fn();
+    kbRefresh();
+  }
+
+  function kbType(c){
+    edit(function(){
+      var t = kb.text;
+      if(/^[.,!?;:]$/.test(c)){
+        t = t.replace(/ +$/,"") + c + " ";
+      } else if(/^[a-z]$/i.test(c)){
+        if(c !== c.toLowerCase()) t += c;
+        else {
+          var up = atStart(t);
+          if(kb.shift) up = !up;
+          t += up ? c.toUpperCase() : c;
+        }
+      } else t += c;
+      kb.text = t;
+    }, true);
+    if(kb.shift){ kb.shift = false; buildKeys(); }
+  }
+
+  function fixI(t){
+    return t.replace(/(^|\s)i('[a-z]+)?$/, function(_, a, b){ return a + "I" + (b || ""); });
+  }
+
+  function kbKey(k){
+    if(k.length === 1){ kbType(k); return; }
+    if(k === "bksp"){ edit(function(){ kb.text = kb.text.slice(0,-1); }, false); return; }
+    if(k === "delword"){ edit(function(){ kb.text = kb.text.replace(/\s+$/,"").replace(/\S+$/,""); }, false); return; }
+    if(k === "space"){
+      edit(function(){
+        var t = fixI(kb.text);
+        if(t && !/\s$/.test(t)) t += " ";
+        kb.text = t;
+      }, false);
+      return;
+    }
+    if(k === "newline"){ edit(function(){ kb.text = kb.text.replace(/ +$/,"") + "\n"; }, false); return; }
+    if(k === "shift"){ kb.shift = !kb.shift; buildKeys(); return; }
+    if(k === "num"){ kb.num = !kb.num; buildKeys(); return; }
+    if(k === "undo"){
+      if(!kb.undo.length){ toast("Nothing to undo"); return; }
+      kb.text = kb.undo.pop(); kb.spoken = false; kbRefresh();
+    }
+  }
+
+  /* ---- keys ---- */
+  var ROWS_ABC = [
+    "q w e r t y u i o p".split(" ").concat([["bksp","⌫",1,"fn","Delete letter"]]),
+    "a s d f g h j k l ' ?".split(" "),
+    "z x c v b n m , . !".split(" ").concat([["delword","⌫ word",1,"fn","Delete word"]]),
+    [["shift","⇧ Shift",2,"fn"],["num","123",1,"fn"],["space","Space",4,"fn"],["newline","↵ Line",2,"fn","New line"],["undo","Undo",2,"fn"]]
+  ];
+  var ROWS_NUM = [
+    "1 2 3 4 5 6 7 8 9 0".split(" ").concat([["bksp","⌫",1,"fn","Delete letter"]]),
+    "@ £ & - + = ( ) / : ;".split(" "),
+    "% # * \" € $ _ , . ?".split(" ").concat([["delword","⌫ word",1,"fn","Delete word"]]),
+    [["shift","⇧ Shift",2,"fn"],["num","abc",1,"fn"],["space","Space",4,"fn"],["newline","↵ Line",2,"fn","New line"],["undo","Undo",2,"fn"]]
+  ];
+
+  function buildKeys(){
+    var wrap = $("kbKeys");
+    wrap.textContent = "";
+    (kb.num ? ROWS_NUM : ROWS_ABC).forEach(function(row){
+      var r = document.createElement("div");
+      r.className = "kbrow";
+      row.forEach(function(k){
+        var b = document.createElement("button");
+        b.type = "button";
+        var id, label, span = 1, cls = "", aria = "";
+        if(typeof k === "string"){ id = k; label = k; }
+        else { id = k[0]; label = k[1]; span = k[2]; cls = k[3] || ""; aria = k[4] || ""; }
+        b.className = "key press " + cls;
+        if(span > 1) b.style.gridColumn = "span " + span;
+        b.setAttribute("data-k", id);
+        b.textContent = label;
+        if(aria) b.setAttribute("aria-label", aria);
+        if(id === "shift" && kb.shift) b.classList.add("on");
+        if(/^[a-z]$/.test(id)) b.classList.add("letter");
+        r.appendChild(b);
+      });
+      wrap.appendChild(r);
+    });
+    updateKeyCase();
+  }
+  function updateKeyCase(){
+    var up = atStart(ctxText());
+    if(kb.shift) up = !up;
+    var ls = $("kbKeys").querySelectorAll(".letter");
+    for(var i=0;i<ls.length;i++){
+      var id = ls[i].getAttribute("data-k");
+      ls[i].textContent = up ? id.toUpperCase() : id;
+    }
+  }
+
+  /* ---- the text box ---- */
+  function renderText(){
+    var box = $("kbText");
+    box.textContent = "";
+    if(kb.text){
+      var s = document.createElement("span");
+      s.textContent = kb.text;
+      if(kb.spoken) s.className = "done";
+      box.appendChild(s);
+    }
+    var c = document.createElement("span"); c.className = "caret"; box.appendChild(c);
+    if(!kb.text){
+      var ph = document.createElement("span"); ph.className = "ph";
+      ph.textContent = "Type here, or pick an idea below";
+      box.appendChild(ph);
+    }
+    box.scrollTop = box.scrollHeight;
+    $("kbMode").textContent = "Mode: " + MODE_NAMES[kb.mode];
+  }
+
+  /* ---- word row: learned words first, then common English ---- */
+  function caseWord(w, part, before){
+    if(w === "i") return "I";
+    if(/^i'/.test(w)) return "I" + w.slice(1);
+    if(atStart(before) || /^[A-Z]/.test(part)) return w.charAt(0).toUpperCase() + w.slice(1);
+    return w;
+  }
+  function renderWords(){
+    var t = ctxText();
+    var m = t.match(/([A-Za-z0-9']+)$/);
+    var part = m ? m[1] : "";
+    var before = m ? t.slice(0, t.length - part.length) : t;
+    var prev = "";
+    if(!/[.!?\n]\s*$/.test(before)){ var pt = tokens(before); prev = pt.length ? pt[pt.length-1] : ""; }
+    var lowp = part.toLowerCase(), sc = {};
+    function add(w, s){
+      if(!w || !/[a-z]/.test(w)) return;
+      if(lowp && (w.indexOf(lowp) !== 0 || w === lowp)) return;
+      sc[w] = (sc[w]||0) + s;
+    }
+    BASE_LIST.forEach(function(w, i){ add(w, 3 * (1 - i / BASE_LIST.length)); });
+    var w;
+    for(w in uni) add(w, 2 + Math.log(1 + uni[w]) * 3);
+    if(prev && bi[prev]) for(w in bi[prev]) add(w, 10 + bi[prev][w] * 6);
+    var list = Object.keys(sc).sort(function(a,b){ return sc[b] - sc[a]; }).slice(0, 6);
+
+    var wrap = $("kbWords");
+    wrap.textContent = "";
+    for(var i=0;i<6;i++){
+      var b = document.createElement("button");
+      b.type = "button";
+      if(list[i]){
+        var shown = caseWord(list[i], part, before);
+        b.className = "word press";
+        b.textContent = shown;
+        b.setAttribute("data-w", shown);
+      } else {
+        b.className = "word blank"; b.disabled = true;
+      }
+      wrap.appendChild(b);
+    }
+  }
+  function pickWord(w){
+    edit(function(){
+      var m = kb.text.match(/([A-Za-z0-9']+)$/);
+      var before = m ? kb.text.slice(0, kb.text.length - m[1].length) : kb.text;
+      kb.text = before + w + " ";
+    }, true);
+  }
+
+  /* ---- sentence ideas ---- */
+  function localSentences(p){
+    var low = p.cur.toLowerCase();
+    return corpus.filter(function(e){
+        if(e.w && p.cur) return false;
+        var t = e.t.toLowerCase();
+        return t.length > low.length && t.indexOf(low) === 0;
+      })
+      .sort(function(a,b){ return score(b) * (b.m === kb.mode ? 2 : 1) - score(a) * (a.m === kb.mode ? 2 : 1); })
+      .slice(0, 3)
+      .map(function(e){
+        var c = e.t.slice(p.cur.length);
+        if(!p.cur && p.pre && !/\s$/.test(p.pre)) c = " " + c;
+        return c;
+      });
+  }
+
+  var aiCache = {}, aiTimer = null, aiCtl = null, aiBusy = false, aiErr = "", aiOpts = [], lastAI = null;
+
+  function renderSent(){
+    var ctx = ctxText();
+    var parts = splitCur(ctx);
+    var list = [], seen = {};
+    function addOpt(c, kind){
+      c = String(c || "");
+      var key = c.trim().toLowerCase();
+      if(!key || seen[key]) return;
+      seen[key] = 1;
+      list.push({c:c, kind:kind});
+    }
+    aiOpts.slice(0,3).forEach(function(c){ addOpt(c, "ai"); });
+    localSentences(parts).forEach(function(c){ if(list.length < 4) addOpt(c, "local"); });
+    list = list.slice(0, 4);
+    kb.sentList = list;
+
+    var pm = ctx.match(/([A-Za-z0-9']+)$/);
+    var wrap = $("kbSent");
+    wrap.textContent = "";
+    list.forEach(function(o, i){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "sent press" + (o.kind === "local" ? " local" : "");
+      b.setAttribute("data-s", String(i));
+      var shown = o.c;
+      if(pm && /^[A-Za-z0-9']/.test(shown)) shown = pm[1] + shown;
+      var tag = document.createElement("span"); tag.className = "tag"; tag.textContent = o.kind === "ai" ? "✦" : "↺";
+      var st = document.createElement("span"); st.className = "st";
+      st.textContent = (ctx.trim() ? "… " : "") + shown.trim();
+      b.appendChild(tag); b.appendChild(st);
+      wrap.appendChild(b);
+    });
+    for(var j=list.length;j<4;j++){
+      var d = document.createElement("div");
+      d.className = "sent empty";
+      if(j === list.length){
+        if(aiBusy) d.textContent = "✦ Thinking…";
+        else if(aiErr) d.textContent = aiErr;
+        else if(settings.kb.ai && !settings.key && !list.length) d.textContent = "Add your Claude key in Settings for whole-sentence ideas";
+        else if(!list.length) d.textContent = "Ideas appear as you type";
+      }
+      wrap.appendChild(d);
+    }
+  }
+
+  function pickSentence(i){
+    var o = kb.sentList[i];
+    if(!o) return;
+    edit(function(){
+      var t = kb.text, c = o.c;
+      if(/\s$/.test(t)) c = c.replace(/^\s+/,"");
+      else if(/[.!?,;:]$/.test(t) && /^[A-Za-z0-9]/.test(c)) c = " " + c;
+      t = (t + c).replace(/ {2,}/g," ");
+      if(!/\s$/.test(t)) t += " ";
+      kb.text = t;
+    }, true);
+  }
+
+  function scheduleAI(){
+    clearTimeout(aiTimer);
+    aiBusy = false; aiErr = "";
+    if(aiCtl){ try{ aiCtl.abort(); }catch(e){} aiCtl = null; }
+    var text = ctxText(), k = kb.mode + "|" + text;
+    if(aiCache[k]){ aiOpts = aiCache[k]; return; }
+    aiOpts = [];
+    /* keep earlier ideas that still fit what he has typed since */
+    if(lastAI && lastAI.mode === kb.mode && text.length > lastAI.text.length && text.indexOf(lastAI.text) === 0){
+      var delta = text.slice(lastAI.text.length).toLowerCase();
+      aiOpts = lastAI.opts.filter(function(o){
+        return o.length > delta.length && o.toLowerCase().indexOf(delta) === 0;
+      }).map(function(o){ return o.slice(delta.length); });
+    }
+    if(!settings.kb.ai || !settings.key) return;
+    if(!$("kb").classList.contains("open")) return;
+    aiTimer = setTimeout(fetchAI, 700);
+  }
+
+  function kbSystem(mode){
+    var how = {
+      talk: "He is speaking to someone in the room, usually a carer or his family. Natural and spoken, usually one short sentence.",
+      email: "He is writing an email in his own email voice. A suggestion may run to two or three sentences.",
+      claude: "He is writing a request to an AI assistant. Make it a clear, specific instruction."
+    }[mode] || "";
+    return [
+      "You are the predictive keyboard for Carlos, who types with eye-gaze, so every letter costs him effort.",
+      "Predict how he will finish what he has started, in his own voice: his vocabulary, sentence length, punctuation and tone, as shown in his samples. British English.",
+      how,
+      "Give three different likely continuations, shortest first. Each is text appended directly after what he has typed: begin with a space if a new word starts, or finish his partly typed last word with no space. If he has typed nothing, give whole openings.",
+      "Never repeat his text. Do not invent names, facts or commitments he has not hinted at.",
+      'Reply with JSON only, no code fences: {"options":["...","...","..."]}'
+    ].join("\n");
+  }
+  function kbSamples(mode){
+    var es = corpus.slice().sort(function(a,b){ return (b.d||0) - (a.d||0); });
+    var same = es.filter(function(e){ return e.m === mode; }).slice(0, 20);
+    var other = es.filter(function(e){ return e.m !== mode; }).slice(0, 30 - same.length);
+    var s = same.concat(other).map(function(e){ return "- " + e.t.slice(0, 400); }).join("\n");
+    if(settings.kb.style) s += (s ? "\n" : "") + "A longer sample of his writing:\n" + settings.kb.style.slice(0, 2500);
+    return s;
+  }
+  function kbUser(text, mode){
+    var s = kbSamples(mode);
+    return (s ? "How Carlos writes:\n" + s + "\n\n" : "") +
+      "What he has typed so far, between the markers (it may end mid-word):\n<<<" + text + ">>>";
+  }
+
+  function fetchAI(){
+    var text = ctxText(), mode = kb.mode, k = mode + "|" + text;
+    aiBusy = true; aiErr = ""; renderSent();
+    var ctl = window.AbortController ? new AbortController() : null;
+    aiCtl = ctl;
+    var opts = {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-api-key":settings.key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model: settings.kb.model || KB_MODEL,
+        max_tokens: 400,
+        system: kbSystem(mode),
+        messages: [{role:"user", content:kbUser(text, mode)}]
+      })
+    };
+    if(ctl) opts.signal = ctl.signal;
+    fetch("https://api.anthropic.com/v1/messages", opts)
+      .then(function(r){ return r.json().then(function(b){ return {ok:r.ok, b:b}; }); })
+      .then(function(res){
+        var current = (ctxText() === text && kb.mode === mode);
+        if(!res.ok){
+          if(current){ aiBusy = false; aiErr = (res.b && res.b.error && res.b.error.message) || "Claude refused the request."; renderSent(); }
+          return;
+        }
+        var raw = (res.b.content || []).filter(function(c){ return c.type === "text"; })
+                    .map(function(c){ return c.text; }).join("").trim();
+        var list = [];
+        try{
+          var mm = raw.match(/\{[\s\S]*\}/);
+          var p = JSON.parse(mm ? mm[0] : raw);
+          if(Array.isArray(p.options)) list = p.options;
+        }catch(e){}
+        list = list.filter(function(o){ return typeof o === "string" && o.trim(); })
+                   .map(function(o){ return o.replace(/\s+$/,""); }).slice(0, 3);
+        aiCache[k] = list;
+        lastAI = {text:text, mode:mode, opts:list};
+        if(current){ aiOpts = list; aiBusy = false; renderSent(); }
+      })
+      .catch(function(err){
+        if(err && err.name === "AbortError") return;
+        if(ctxText() === text){ aiBusy = false; aiErr = "Couldn't reach Claude for ideas."; renderSent(); }
+      });
+  }
+
+  function kbRefresh(){
+    renderText();
+    updateKeyCase();
+    renderWords();
+    scheduleAI();
+    renderSent();
+  }
+
+  /* ---- what to do with the finished text ---- */
+  /* the device voice for now; an ElevenLabs clone of his voice slots in here later */
+  function voiceSpeak(text){
+    try{
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-GB";
+      var v = speechSynthesis.getVoices().filter(function(x){ return /en[-_]GB/i.test(x.lang); })[0];
+      if(v) u.voice = v;
+      speechSynthesis.cancel();
+      setTimeout(function(){ try{ speechSynthesis.resume(); speechSynthesis.speak(u); }catch(e){} }, 120);
+      return true;
+    }catch(e){ return false; }
+  }
+
+  function fallbackCopy(t){
+    var a = document.createElement("textarea");
+    a.setAttribute("data-noinput","1");
+    a.value = t; a.style.position = "fixed"; a.style.opacity = "0";
+    document.body.appendChild(a); a.select();
+    try{ document.execCommand("copy"); toast("Copied. Paste it where you need it."); }
+    catch(e){ toast("The browser blocked copying."); }
+    a.remove();
+  }
+  function copyText(t){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toast("Copied. Paste it where you need it."); },
+                                            function(){ fallbackCopy(t); });
+    } else fallbackCopy(t);
+  }
+
+  function kbDone(){
+    kb.undo.push(kb.text);
+    kb.text = ""; kb.spoken = false;
+    kbRefresh();
+  }
+
+  function kbAction(a){
+    if(a === "hide"){ kbHide(); return; }
+    if(a === "mode"){
+      kb.mode = MODES[(MODES.indexOf(kb.mode) + 1) % MODES.length];
+      kbRefresh(); return;
+    }
+    if(a === "clear"){ edit(function(){ kb.text = ""; }, false); return; }
+
+    var t = kb.text.replace(/\s+$/,"");
+    if(!t){ toast("Type something first"); return; }
+
+    if(a === "speak"){
+      voiceSpeak(t);
+      if(!kb.spoken) kbLearn(t, kb.mode);
+      kb.spoken = true;
+      kbRefresh();
+      return;
+    }
+    if(a === "echo"){
+      if(!speakingAddress()) kbHide();
+      if(speak(t)){ kbLearn(t, "talk"); toast("Said on the Echo"); kbDone(); }
+      return;
+    }
+    if(a === "claude"){
+      kbHide(); openChat(); send(t); kbDone();
+      return;
+    }
+    if(a === "email"){
+      kbLearn(t, "email");
+      try{ window.open("https://mail.google.com/mail/?view=cm&fs=1&body=" + encodeURIComponent(t), "_blank"); }catch(e){}
+      toast("Opening Gmail with your text");
+      kbDone();
+      return;
+    }
+    if(a === "copy"){
+      copyText(t);
+      if(!kb.spoken) kbLearn(t, kb.mode);
+      kb.spoken = true;
+      kbRefresh();
+      return;
+    }
+    if(a === "insert"){
+      var tg = kb.target;
+      if(!tg){ return; }
+      tg.value = t;
+      try{ tg.dispatchEvent(new Event("input", {bubbles:true})); }catch(e){}
+      if(tg.id !== "chatInput" && tg.id !== "dockInput") kbLearn(t, kb.mode);
+      kbHide(); kbDone();
+      toast("Put in the box");
+    }
+  }
+
+  /* remember the last text box he was in, so the keyboard can fill it */
+  var lastInput = null, lastInputAt = 0;
+  document.addEventListener("focusin", function(e){
+    var t = e.target;
+    if(!t || !t.matches || t.hasAttribute("data-noinput")) return;
+    if(t.matches("input[type=text],input[type=url],input[type=password],textarea") && !t.closest("#kb")){
+      lastInput = t; lastInputAt = Date.now();
+    }
+  });
+
+  function kbShow(){
+    var tg = (lastInput && Date.now() - lastInputAt < 60000 && lastInput.getClientRects().length) ? lastInput : null;
+    kb.target = tg;
+    if(tg){
+      if(tg.value.trim() && !kb.text){ kb.text = tg.value; kb.spoken = false; }
+      if(tg.id === "chatInput" || tg.id === "dockInput") kb.mode = "claude";
+      else if(tg.id === "sayText") kb.mode = "talk";
+    }
+    $("kbInsert").hidden = !tg;
+    $("kb").classList.add("open");
+    kbRefresh();
+  }
+  function kbHide(){
+    stopDwell();
+    clearTimeout(aiTimer);
+    $("kb").classList.remove("open");
+  }
+
+  $("kb").addEventListener("click", function(e){
+    var b = e.target.closest("[data-k],[data-w],[data-s],[data-act]");
+    if(!b || b.disabled) return;
+    if(b.hasAttribute("data-k")){ kbKey(b.getAttribute("data-k")); return; }
+    if(b.hasAttribute("data-w")){ pickWord(b.getAttribute("data-w")); return; }
+    if(b.hasAttribute("data-s")){ pickSentence(Number(b.getAttribute("data-s"))); return; }
+    kbAction(b.getAttribute("data-act"));
+  });
+
+  /* optional look-to-press inside the keyboard. After a press, the gaze must
+     leave that spot before the next press, so nothing repeats by accident. */
+  var dwellT = null, dwellEl = null, dwellLock = null;
+  function stopDwell(){
+    if(dwellT){ clearTimeout(dwellT); dwellT = null; }
+    if(dwellEl) dwellEl.classList.remove("dwelling");
+    dwellEl = null;
+  }
+  $("kb").addEventListener("pointermove", function(e){
+    if(dwellLock){
+      if(e.clientX < dwellLock.left || e.clientX > dwellLock.right ||
+         e.clientY < dwellLock.top  || e.clientY > dwellLock.bottom) dwellLock = null;
+      else return;
+    }
+    var d = settings.kb.dwell;
+    if(!d) return;
+    var el = e.target.closest ? e.target.closest("[data-k],[data-w],[data-s],[data-act]") : null;
+    if(el && el.disabled) el = null;
+    if(el === dwellEl) return;
+    stopDwell();
+    if(!el) return;
+    dwellEl = el;
+    el.style.setProperty("--dwell", d + "ms");
+    el.classList.add("dwelling");
+    dwellT = setTimeout(function(){
+      dwellT = null;
+      dwellLock = el.getBoundingClientRect();
+      el.classList.remove("dwelling");
+      dwellEl = null;
+      clack("small");
+      el.click();
+    }, d);
+  });
+  $("kb").addEventListener("pointerleave", stopDwell);
+
+  /* a carer's physical keyboard also types into it */
+  document.addEventListener("keydown", function(e){
+    if(!$("kb").classList.contains("open") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.key === "Escape") return;
+    if(e.key.length === 1){ e.preventDefault(); if(e.key === " ") kbKey("space"); else kbType(e.key); }
+    else if(e.key === "Backspace"){ e.preventDefault(); kbKey("bksp"); }
+    else if(e.key === "Enter"){ e.preventDefault(); kbKey("newline"); }
+  });
+
+  /* a Keyboard button in every top bar, so it is always in the same place */
+  function addKbButtons(){
+    var heads = document.querySelectorAll(".bar, .homebar, .sheethead");
+    for(var i=0;i<heads.length;i++){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "barbtn press kbbtn";
+      b.textContent = "⌨ Keyboard";
+      b.addEventListener("click", kbShow);
+      if(heads[i].classList.contains("bar")) heads[i].insertBefore(b, $("editBtn"));
+      else heads[i].appendChild(b);
+    }
+  }
+
   /* ---------- clicks ---------- */
   document.addEventListener("pointerdown", function(e){
     var p = e.target.closest(".press");
@@ -1226,6 +2056,7 @@
   });
 
   document.addEventListener("click", function(e){
+    if(e.target.closest("#kb")) return;
     if(e.target.closest("[data-close]")){ closeSheets(); return; }
     if(e.target.closest("#addTile")){ clack("small"); openSheet("addSheet"); return; }
 
@@ -1266,10 +2097,13 @@
 
   document.addEventListener("keydown", function(e){
     if(e.key === "Enter" || e.key === " "){
-      var c = e.target.closest(".ctl");
+      var c = e.target.closest && e.target.closest(".ctl");
       if(c){ e.preventDefault(); c.click(); }
     }
-    if(e.key === "Escape"){ closeSheets(); goHome(); closeChat(); leaveAway(); }
+    if(e.key === "Escape"){
+      if($("kb").classList.contains("open")){ kbHide(); return; }
+      closeSheets(); goHome(); closeChat(); leaveAway();
+    }
   });
 
   $("editBtn").addEventListener("click", function(){
@@ -1289,8 +2123,11 @@
   }
   tick(); setInterval(tick, 15000);
 
+  rebuildCounts();
   buildSwatches();
   setMode("embed");
+  addKbButtons();
+  buildKeys();
   render();
 
   if("serviceWorker" in navigator && location.protocol === "https:"){
