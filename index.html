@@ -266,10 +266,13 @@
   /* ---------- phrase buttons ---------- */
   #sayForm{max-width:none}
   #sayForm label,#sayForm .prow,#sayForm #sayMode,#sayForm .pedit{max-width:900px}
-  .phrases{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
-  .phrase{min-height:140px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-    text-align:center;font-size:21px;font-weight:700;line-height:1.2;color:#1d2430;background:linear-gradient(180deg,#d9ecff,#b9d6f5)}
-  .phrase .pic{position:relative;z-index:1;font-size:52px;line-height:1}
+  .phrases{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .phrase{min-height:84px;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    text-align:center;font-size:16px;font-weight:700;line-height:1.2;color:#1d2430;background:linear-gradient(180deg,#d9ecff,#b9d6f5)}
+  .phrase .pic{position:relative;z-index:1;font-size:30px;line-height:1}
+  .phrase .px{display:none;position:absolute;top:-8px;right:-8px;z-index:4;width:44px;height:44px;border-radius:50%;
+    background:#e05548;color:#fff;font-size:24px;font-weight:800;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+  body.phedit .phrase .px{display:flex}
   .phrase .pt{position:relative;z-index:1}
   .phrase:nth-child(4n+2){background:linear-gradient(180deg,#d8f3e6,#b3e2cb)}
   .phrase:nth-child(4n+3){background:linear-gradient(180deg,#fdebd3,#f6d2a6)}
@@ -1270,7 +1273,14 @@
       var pic = document.createElement("span"); pic.className = "pic"; pic.textContent = ph.p || "💬";
       var tx = document.createElement("span"); tx.className = "pt"; tx.textContent = ph.t;
       b.appendChild(pic); b.appendChild(tx);
-      b.addEventListener("click", function(){
+      var x = document.createElement("span"); x.className = "px"; x.textContent = "✕";
+      x.setAttribute("role","button"); x.setAttribute("aria-label","Delete " + ph.t);
+      b.appendChild(x);
+      b.addEventListener("click", function(e){
+        if(phEditing && e.target.closest(".px")){
+          settings.phrases.splice(i,1); saveSettings(); closePhrase(); buildSayChips();
+          setStatus("sayStatus","🗑️ Deleted: " + ph.t); return;
+        }
         if(phEditing){ openPhrase(i); return; }
         if(sayOut(ph.t)) setStatus("sayStatus","Said on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ": " + ph.t);
       });
@@ -1309,7 +1319,7 @@
     phEditing = !phEditing;
     document.body.classList.toggle("phedit", phEditing);
     this.textContent = phEditing ? "✅ Done changing" : "✏️ Change phrases";
-    setStatus("sayStatus", phEditing ? "Press a phrase to change its words or picture, or delete it." : "");
+    setStatus("sayStatus", phEditing ? "Press ✕ to delete. Press a phrase to change its words or picture." : "");
     if(!phEditing) closePhrase();
   });
   $("phOk").addEventListener("click", function(){
@@ -1323,8 +1333,6 @@
   var delArmed = false;
   $("phDel").addEventListener("click", function(){
     if(phIndex < 0) return;
-    if(!delArmed){ delArmed = true; this.textContent = "Press again to delete"; var me=this; setTimeout(function(){ delArmed=false; me.textContent="🗑️ Delete"; },4000); return; }
-    delArmed = false; this.textContent = "🗑️ Delete";
     settings.phrases.splice(phIndex,1);
     saveSettings(); buildSayChips(); closePhrase();
     setStatus("sayStatus","Deleted.");
