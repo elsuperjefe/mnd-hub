@@ -305,9 +305,11 @@
   .kbacts button{flex:1;min-height:64px;padding:0 8px;font-size:20px;font-weight:700;background:linear-gradient(180deg,#31404f,#212b38)}
   .kbacts .go{background:linear-gradient(180deg,#9cc4ff,#6ba2f5);color:#0d1219}
   .kbacts .echo{background:linear-gradient(180deg,#3aa08c,#237567)}
+  .kb .press:hover,.press.key:hover{background:#ffe14d !important;color:#111 !important}
+  .kb .press.dwelling{background:#ffe14d !important;color:#111 !important;outline:4px solid #fff3a8;outline-offset:2px}
   .kb .dwelling::before{
-    content:"";position:absolute;left:0;bottom:0;height:7px;width:0;z-index:3;
-    background:#ffffff;border-radius:0 0 0 18px;animation:dwellfill var(--dwell,1000ms) linear forwards;
+    content:"";position:absolute;left:0;bottom:0;height:9px;width:0;z-index:3;
+    background:#111;border-radius:0 0 0 18px;animation:dwellfill var(--dwell,1000ms) linear forwards;
   }
   @keyframes dwellfill{to{width:100%}}
   @media (max-height:700px){
@@ -693,7 +695,8 @@
     settings.kb = {
       ai: (typeof k.ai === "undefined") ? 1 : Number(k.ai),
       model: k.model || KB_MODEL,
-      dwell: Number(k.dwell) || 0,
+      dwell: (k.dwellV3 ? Number(k.dwell) || 0 : 0),
+      dwellV3: 1,
       style: k.style || ""
     };
   }
@@ -887,7 +890,7 @@
       $("sayText").value = "";
       markSay();
       buildSayChips();
-      $("sayText").focus();
+      lastInput = $("sayText"); lastInputAt = Date.now();
     }
     if(id === "alarmSheet"){
       setStatus("alarmStatus","");
@@ -1151,7 +1154,9 @@
      alarm address (same Voice Monkey token) plus the speaker's name */
   function speakingAddress(){
     if(settings.alexa) return settings.alexa;
-    var m = (settings.alarm || "").match(/[?&]token=([^&]+)/);
+    var pool = [settings.alarm || ""].concat((settings.commands || []).map(function(c){ return c.url || ""; }));
+    var m = null;
+    for(var i=0;i<pool.length && !m;i++) m = pool[i].replace(/&amp;/g,"&").match(/token[=\/:]([A-Za-z0-9_\-.%]+)/i);
     if(!m) return "";
     return "https://api-v3.voicemonkey.io/announce?token=" + m[1] + "&device=" + encodeURIComponent(settings.speaker || "kitchen-echo");
   }
@@ -1160,9 +1165,9 @@
     if(!text) return false;
     var addr = speakingAddress();
     if(!addr){
-      openSheet("settingsSheet");
-      setStatus("settingsStatus","Paste your alarm address first, then save.");
-      return false;
+      voiceSpeak(text);
+      toast("Alexa is not linked on this device yet, so the computer spoke it.");
+      return true;
     }
     var base = addr
       .replace(/([?&])(speech|text|announcement)=[^&]*/gi,"$1")
@@ -1191,6 +1196,7 @@
     saveSettings(); markSay();
     if(settings.sayMode === "pc") sayOut("This computer will speak");
   });
+
 
   function buildSayChips(){
     var wrap = $("sayChips");
@@ -1632,6 +1638,8 @@
     }
     box.scrollTop = box.scrollHeight;
     $("kbMode").textContent = "Mode: " + MODE_NAMES[kb.mode];
+    var sp = $("kb").querySelector('[data-act="speak"]');
+    if(sp) sp.textContent = settings.sayMode === "pc" ? "Speak (PC)" : "Speak (Alexa)";
   }
 
   /* ---- word row: learned words first, then common English ---- */
@@ -1914,7 +1922,8 @@
     if(!t){ toast("Type something first"); return; }
 
     if(a === "speak"){
-      voiceSpeak(t);
+      if(!sayOut(t)) return;
+      toast(settings.sayMode === "pc" ? "Said on this computer" : "Said on the Echo");
       if(!kb.spoken) kbLearn(t, kb.mode);
       kb.spoken = true;
       kbRefresh();
