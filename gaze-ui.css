@@ -1,0 +1,148 @@
+/* Gaze UI — the shared look for every eye-gaze app (from GazeCast).
+   Calm, large, glassy. Dark by default, light optional via <html data-theme="light">.
+   Every button gets a colour family through --c (set with data-cat or style="--c:…"). */
+
+:root {
+  --font: "Manrope", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --spring: linear(0, 0.006, 0.025 2.8%, 0.101 6.1%, 0.539 18.9%, 0.721 25.3%, 0.849 31.5%, 0.937 38.1%, 0.968 41.8%, 0.991 45.7%, 1.006 50.1%, 1.015 55%, 1.017 63.9%, 1.001 85.9%, 1);
+  --bounce: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017, 1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%, 1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%, 0.997 69.8%, 1.003 76.9%, 1);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --radius: 26px;
+
+  --bg0: #070914; --bg1: #10132b;
+  --text: #f4f6ff; --muted: #a9b0d2;
+  --glass: rgba(255, 255, 255, .055); --glass-strong: rgba(22, 26, 52, .86);
+  --btn-base: rgba(255, 255, 255, .035);
+  --field: rgba(0, 0, 0, .28);
+  --line: rgba(255, 255, 255, .11); --line-strong: rgba(255, 255, 255, .2);
+  --shadow: 0 30px 70px -28px rgba(0, 0, 0, .75);
+  --blob-a: #3a5bff; --blob-b: #a03cff; --blob-c: #12b8a6; --blob-alpha: .34;
+  --c-nav: #7fabff; --c-sys: #5fe6d0; --c-apps: #ffc073; --c-set: #bba6ff; --c-gaze: #f6a0dc; --c-danger: #ff8d9e;
+  --c: var(--c-nav);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg0: #f1f3fc; --bg1: #dfe5f8;
+  --text: #171b31; --muted: #555d80;
+  --glass: rgba(255, 255, 255, .58); --glass-strong: rgba(250, 251, 255, .9);
+  --btn-base: rgba(255, 255, 255, .72);
+  --field: rgba(255, 255, 255, .8);
+  --line: rgba(40, 52, 110, .13); --line-strong: rgba(40, 52, 110, .28);
+  --shadow: 0 30px 70px -30px rgba(52, 64, 130, .45);
+  --blob-a: #8fb0ff; --blob-b: #d7a8ff; --blob-c: #8ee8d8; --blob-alpha: .6;
+  --c-nav: #2c66e8; --c-sys: #0b8f84; --c-apps: #c96a04; --c-set: #7447f2; --c-gaze: #b8229a; --c-danger: #dc1f4a;
+  color-scheme: light;
+}
+[data-cat="nav"] { --c: var(--c-nav); }
+[data-cat="sys"] { --c: var(--c-sys); }
+[data-cat="apps"] { --c: var(--c-apps); }
+[data-cat="set"] { --c: var(--c-set); }
+[data-cat="gaze"] { --c: var(--c-gaze); }
+[data-cat="danger"] { --c: var(--c-danger); }
+
+* { box-sizing: border-box; }
+body.gaze {
+  margin: 0; font-family: var(--font); color: var(--text);
+  background: radial-gradient(120% 90% at 50% 0%, var(--bg1), var(--bg0) 70%) fixed;
+  -webkit-font-smoothing: antialiased; transition: background .6s, color .4s;
+}
+:where(.gaze) button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:where(.gaze) :focus-visible { outline: 3px solid var(--c); outline-offset: 3px; }
+:where(.gaze) :is(h1, h2, h3, p) { margin: 0; }
+.gaze [hidden] { display: none !important; }
+.ico { width: 1em; height: 1em; flex: none; }
+
+/* drifting colour blobs behind everything */
+.backdrop { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+.backdrop i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(90px); opacity: var(--blob-alpha); will-change: transform; }
+.backdrop i:nth-child(1) { background: radial-gradient(circle, var(--blob-a), transparent 62%); left: -22vmax; top: -30vmax; animation: drift-a 36s ease-in-out infinite alternate; }
+.backdrop i:nth-child(2) { background: radial-gradient(circle, var(--blob-b), transparent 62%); right: -26vmax; top: 6vmax; animation: drift-b 44s ease-in-out infinite alternate; }
+.backdrop i:nth-child(3) { background: radial-gradient(circle, var(--blob-c), transparent 62%); left: 18vmax; bottom: -46vmax; animation: drift-c 52s ease-in-out infinite alternate; }
+@keyframes drift-a { to { transform: translate(16vmax, 12vmax) scale(1.15); } }
+@keyframes drift-b { to { transform: translate(-18vmax, 10vmax) scale(.9); } }
+@keyframes drift-c { to { transform: translate(10vmax, -14vmax) scale(1.2); } }
+@media (prefers-reduced-motion: reduce) { .backdrop i { animation: none; } }
+
+/* frosted glass panels */
+.glass {
+  background: var(--glass); border: 1px solid var(--line); border-radius: var(--radius);
+  backdrop-filter: blur(26px) saturate(150%); -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+/* the one button style: glass tinted by its colour family */
+.g-btn {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  min-height: 96px; padding: 14px 26px; border-radius: 24px;
+  border: 1px solid var(--line);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 19%, transparent), color-mix(in srgb, var(--c) 5%, transparent) 72%), var(--btn-base);
+  color: var(--text); font-size: 24px; font-weight: 700; line-height: 1.15; text-align: center; letter-spacing: -.005em;
+  transition: transform .5s var(--bounce), box-shadow .3s var(--ease), border-color .3s, background .3s, opacity .3s;
+  user-select: none; -webkit-user-select: none;
+}
+.g-btn .glyph { display: grid; place-items: center; color: var(--c); font-size: 1.5em; filter: drop-shadow(0 0 12px color-mix(in srgb, var(--c) 55%, transparent)); transition: transform .5s var(--bounce); }
+.g-btn.tall { flex-direction: column; min-height: 170px; gap: 12px; }
+.g-btn.tall .glyph { font-size: 52px; }
+.g-btn.small { min-height: 72px; font-size: 20px; padding: 10px 20px; border-radius: 20px; }
+.g-btn.solid { background: linear-gradient(155deg, color-mix(in srgb, var(--c) 62%, transparent), color-mix(in srgb, var(--c) 34%, transparent)), var(--btn-base); border-color: color-mix(in srgb, var(--c) 75%, transparent); }
+.g-btn.solid .glyph { color: var(--text); }
+
+/* look / hover: grow, glow in its own colour */
+.g-btn:hover, .g-btn.gz-hot {
+  transform: scale(1.045); z-index: 3;
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow: 0 14px 44px -10px color-mix(in srgb, var(--c) 60%, transparent), 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, .16);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 32%, transparent), color-mix(in srgb, var(--c) 10%, transparent) 72%), var(--btn-base);
+}
+.g-btn:hover .glyph, .g-btn.gz-hot .glyph { transform: scale(1.1); }
+.g-btn:active { transform: scale(.96); transition-duration: .12s; }
+/* chosen / switched on */
+.g-btn.on, .g-btn[aria-pressed="true"] {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 52%, transparent), color-mix(in srgb, var(--c) 24%, transparent)), var(--btn-base);
+  border-color: color-mix(in srgb, var(--c) 75%, transparent);
+  box-shadow: 0 0 34px -8px color-mix(in srgb, var(--c) 70%, transparent), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+.g-btn.on .glyph, .g-btn[aria-pressed="true"] .glyph { color: var(--text); }
+.g-btn:disabled, .g-btn[aria-disabled="true"] { opacity: .4; pointer-events: none; }
+
+/* dwell ring: traces the button outline while the eyes rest on it */
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 4; }
+.ring rect { x: 2.5px; y: 2.5px; width: calc(100% - 5px); height: calc(100% - 5px); fill: none; stroke: var(--c); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; filter: drop-shadow(0 0 7px var(--c)); }
+.ring.run rect { animation: ring-fill var(--dwell, 900ms) linear forwards; }
+.ring.done rect { stroke-dashoffset: 0; animation: ring-done .32s ease-out forwards; }
+@keyframes ring-fill { to { stroke-dashoffset: 0; } }
+@keyframes ring-done { to { opacity: 0; stroke-width: 12; } }
+
+/* text */
+.g-title { font-size: clamp(30px, 4vw, 46px); font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+.g-lead { font-size: clamp(20px, 2vw, 25px); color: var(--muted); line-height: 1.5; max-width: 36ch; }
+.g-label { font-size: 15px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* text box (only when typing truly cannot be avoided) */
+.g-field {
+  width: 100%; min-height: 76px; padding: 16px 22px; border-radius: 20px;
+  font: 600 22px var(--font); color: var(--text);
+  background: var(--field); border: 2px solid var(--line);
+}
+.g-field:focus { outline: none; border-color: var(--c); }
+
+/* status pill with a dot */
+.g-chip { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 18px; border-radius: 22px; font-size: 17px; font-weight: 700; background: var(--glass); border: 1px solid var(--line); }
+.dot { width: 11px; height: 11px; border-radius: 50%; background: var(--c-danger); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-danger) 22%, transparent); flex: none; }
+[data-tone="ok"] .dot { background: var(--c-sys); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-sys) 22%, transparent), 0 0 14px var(--c-sys); }
+[data-tone="wait"] .dot { background: var(--c-apps); animation: g-blink 1.2s ease-in-out infinite; }
+@keyframes g-blink { 50% { opacity: .35; } }
+
+/* step progress dots */
+.g-steps { display: flex; gap: 10px; align-items: center; }
+.g-steps i { width: 14px; height: 14px; border-radius: 50%; background: var(--line-strong); transition: width .5s var(--spring), background .3s; }
+.g-steps i.now { width: 40px; border-radius: 7px; background: var(--c-nav); }
+.g-steps i.done { background: var(--c-sys); }
+
+/* gentle entrance */
+.g-in { animation: g-in .6s var(--spring) both; }
+@keyframes g-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+
+/* toast */
+.g-toast { position: fixed; left: 50%; bottom: 36px; translate: -50% 0; z-index: 90; padding: 20px 30px; border-radius: 22px; font-size: 22px; font-weight: 700; background: var(--glass-strong); border: 1px solid color-mix(in srgb, var(--c-sys) 50%, transparent); box-shadow: var(--shadow); max-width: 86vw; text-align: center; backdrop-filter: blur(26px); }

@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hub</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0f141c">
+<meta name="theme-color" content="#070914">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gaze-ui.css">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -358,8 +362,111 @@
     box-shadow:0 12px 34px rgba(0,0,0,.45);max-width:80vw;text-align:center;
   }
 </style>
+<style id="gazeTheme">
+  /* ===== Gaze UI look (GazeCast style), layered over the Hub's own layout ===== */
+  body.gaze{font-family:var(--font);background:radial-gradient(120% 90% at 50% 0%, var(--bg1), var(--bg0) 70%) fixed;color:var(--text)}
+  .gaze .bar,.gaze .warn,.gaze .grid,.gaze .answer,.gaze .dock{position:relative;z-index:1}
+  .gaze .bar,.gaze .dock,.gaze .homebar,.gaze .composer{background:var(--glass);border-color:var(--line);backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%)}
+  .gaze .clock{font-weight:800;letter-spacing:-.02em}
+  .gaze .date,.gaze .apptitle,.gaze .hint,.gaze label{color:var(--muted)}
+
+  /* every pressable thing becomes a tinted glass button */
+  .gaze .press{
+    --c:var(--c-nav);
+    border:1px solid var(--line);border-radius:24px;color:var(--text);
+    background:linear-gradient(155deg, color-mix(in srgb, var(--c) 19%, transparent), color-mix(in srgb, var(--c) 5%, transparent) 72%), var(--btn-base);
+    box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
+    transition:transform .5s var(--bounce), box-shadow .3s var(--ease), border-color .3s, background .3s;
+    filter:none;text-shadow:none;
+  }
+  .gaze .press::after{display:none}
+  .gaze .press:hover,.gaze .press.gz-hot{
+    filter:none;transform:scale(1.035);z-index:3;
+    border-color:color-mix(in srgb, var(--c) 70%, transparent);
+    box-shadow:0 14px 44px -10px color-mix(in srgb, var(--c) 60%, transparent), 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent), inset 0 1px 0 rgba(255,255,255,.16);
+    background:linear-gradient(155deg, color-mix(in srgb, var(--c) 32%, transparent), color-mix(in srgb, var(--c) 10%, transparent) 72%), var(--btn-base);
+  }
+  .gaze .press:active,.gaze .press.down{transform:scale(.96);transition-duration:.12s;box-shadow:var(--shadow)}
+  .gaze .press[aria-pressed="true"],.gaze .key.on{
+    background:linear-gradient(155deg, color-mix(in srgb, var(--c) 52%, transparent), color-mix(in srgb, var(--c) 24%, transparent)), var(--btn-base);
+    border-color:color-mix(in srgb, var(--c) 75%, transparent);color:var(--text);outline:none;
+    box-shadow:0 0 34px -8px color-mix(in srgb, var(--c) 70%, transparent), inset 0 1px 0 rgba(255,255,255,.22);
+  }
+
+  /* colour families */
+  .gaze .tile.alarm,.gaze .danger,.gaze .cmdrow button,.gaze .phrase .px{--c:var(--c-danger)}
+  .gaze .primary,.gaze .homebtn,.gaze .dock .ask,.gaze .awaybtns .b1,.gaze .kbacts .go,.gaze .kbside .hidekb,.gaze .composer button:not(.ghost){--c:var(--c-nav)}
+  .gaze .chip,.gaze .kbacts .echo,.gaze .awaybtns .b2,.gaze .sent,.gaze .msg.ran{--c:var(--c-sys)}
+  .gaze .word{--c:var(--c-set)}
+  .gaze .setupbtn{--c:var(--c-apps)}
+  .gaze .barbtn,.gaze .closebtn,.gaze .ghostbtn,.gaze .radio,.gaze .key,.gaze .kbside button,.gaze .kbacts button,.gaze .answer button,.gaze .stuck button,.gaze .awaybtns .b3,.gaze .dock .full,.gaze .composer button.ghost,.gaze .pics button{--c:var(--c-set)}
+  .gaze .key{--c:var(--c-nav)}
+  .gaze .primary,.gaze .homebtn,.gaze .danger,.gaze .dock .ask,.gaze .awaybtns .b1,.gaze .kbacts .go,.gaze .kbacts .echo,.gaze .kbside .hidekb,.gaze .setupbtn{
+    background:linear-gradient(155deg, color-mix(in srgb, var(--c) 58%, transparent), color-mix(in srgb, var(--c) 30%, transparent)), var(--btn-base);
+    border-color:color-mix(in srgb, var(--c) 70%, transparent);color:var(--text);
+  }
+  .gaze .danger{min-height:130px;font-size:30px}
+
+  /* tiles */
+  .gaze .tile{border-radius:28px;padding:24px}
+  .gaze .tile .glyph{
+    width:80px;height:80px;border-radius:24px;font-size:42px;
+    color:color-mix(in srgb, var(--c) 55%, white);
+    background:color-mix(in srgb, var(--c) 16%, transparent);
+    border:1px solid color-mix(in srgb, var(--c) 30%, transparent);
+    box-shadow:none;filter:drop-shadow(0 0 14px color-mix(in srgb, var(--c) 45%, transparent));
+    transition:transform .5s var(--bounce);
+  }
+  :root[data-theme="light"] .gaze .tile .glyph{color:color-mix(in srgb, var(--c) 80%, black)}
+  .gaze .tile:hover .glyph,.gaze .tile.gz-hot .glyph{transform:scale(1.08) rotate(-3deg)}
+  .gaze .tile .name{font-weight:800;letter-spacing:-.01em;text-shadow:none}
+  .gaze .tile.add{background:none;border:3px dashed var(--line-strong);box-shadow:none;color:var(--muted)}
+  .gaze .tile.add .glyph{--c:var(--c-apps)}
+  .gaze .ctl{background:var(--glass-strong);border:1px solid var(--line-strong);border-radius:18px;color:var(--text)}
+  body.gaze.editing .tile{outline:3px solid color-mix(in srgb, var(--c-apps) 70%, transparent)}
+
+  /* full screens and sheets */
+  .gaze .appview,.gaze .away{background:radial-gradient(120% 90% at 50% 0%, var(--bg1), var(--bg0) 70%)}
+  .gaze .sheet,.gaze .kb{background:var(--glass-strong);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%)}
+  .gaze .sheethead{border-color:var(--line)}
+  .gaze .sheethead h2,.gaze .awaybody h2{font-weight:800;letter-spacing:-.02em}
+  .gaze .stuck,.gaze .answer,.gaze .pedit{background:var(--glass);border-color:var(--line)}
+  .gaze .warn{background:color-mix(in srgb, var(--c-danger) 18%, transparent);border-color:color-mix(in srgb, var(--c-danger) 40%, transparent)}
+
+  /* text boxes */
+  .gaze input[type=text],.gaze input[type=url],.gaze input[type=password],.gaze textarea,.gaze .dock input,.gaze .composer input,.gaze .kbtext{
+    background:var(--field);color:var(--text);border:2px solid var(--line);border-radius:20px;font-family:var(--font);
+  }
+  .gaze input:focus,.gaze textarea:focus{outline:none;border-color:var(--c-nav)}
+  .gaze .kbtext{border-color:color-mix(in srgb, var(--c-nav) 60%, transparent)}
+  .gaze .caret{background:var(--c-nav)}
+
+  /* chat */
+  .gaze .msg.me{background:color-mix(in srgb, var(--c-nav) 22%, var(--glass));border:1px solid var(--line)}
+  .gaze .msg.claude{background:var(--glass);border-color:var(--line)}
+  .gaze .msg.ran{background:color-mix(in srgb, var(--c-sys) 30%, transparent)}
+  .gaze .msg.err{background:color-mix(in srgb, var(--c-danger) 20%, transparent);border-color:color-mix(in srgb, var(--c-danger) 45%, transparent)}
+
+  /* phrases: four soft colour families in turn */
+  .gaze .phrase{--c:var(--c-sys);color:var(--text);border-radius:22px;font-size:17px}
+  .gaze .phrase:nth-child(4n+2){--c:var(--c-nav)}
+  .gaze .phrase:nth-child(4n+3){--c:var(--c-apps)}
+  .gaze .phrase:nth-child(4n+4){--c:var(--c-gaze)}
+  .gaze .phrase.addp{background:none;border:3px dashed var(--line-strong);box-shadow:none;color:var(--muted)}
+  .gaze .phrase .px{background:var(--c-danger);color:#fff}
+  .gaze .saywhere{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));max-width:900px}
+
+  /* keyboard: no yellow flash, glow in the key's own colour instead */
+  .gaze .kb .press:hover,.gaze .press.key:hover{background:linear-gradient(155deg, color-mix(in srgb, var(--c) 38%, transparent), color-mix(in srgb, var(--c) 14%, transparent) 72%), var(--btn-base) !important;color:var(--text) !important}
+  .gaze .kb .press.dwelling{background:linear-gradient(155deg, color-mix(in srgb, var(--c) 52%, transparent), color-mix(in srgb, var(--c) 24%, transparent)), var(--btn-base) !important;color:var(--text) !important;outline:3px solid var(--c);outline-offset:2px}
+  .gaze .kb .dwelling::before{background:var(--c);border-radius:0 0 0 22px}
+  .gaze .sent.empty{border-color:var(--line-strong);color:var(--muted)}
+
+  .gaze .toast{background:var(--glass-strong);color:var(--text);border:1px solid color-mix(in srgb, var(--c-sys) 50%, transparent);border-radius:22px;backdrop-filter:blur(26px);box-shadow:var(--shadow)}
+</style>
 </head>
-<body>
+<body class="gaze">
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <div class="bar">
   <div>
@@ -368,6 +475,7 @@
   <div class="date" id="date"></div>
   <div class="spacer"></div>
   <button class="barbtn press" id="editBtn" aria-pressed="false">Edit</button>
+  <button class="barbtn press setupbtn" id="setupBtn" onclick="location.href='setup.html'">Set up</button>
   <button class="barbtn press" id="settingsBtn">Settings</button>
 </div>
 
@@ -448,6 +556,10 @@
       <label>What should it say?
         <input type="text" id="sayText" autocomplete="off" placeholder="Please come through when you can">
       </label>
+      <div id="sayWhereWrap" hidden>
+        <p class="g-label" style="margin-bottom:10px">Speak on</p>
+        <div class="saywhere" id="sayWhere"></div>
+      </div>
       <div class="radios" id="sayMode" style="gap:18px">
         <button type="button" class="primary press" data-saymode="pc" style="flex:1;min-height:96px;font-size:27px">💻 Speak on computer</button>
         <button type="button" class="primary press" data-saymode="alexa" style="flex:1;min-height:96px;font-size:27px;background:linear-gradient(180deg,#3aa08c,#237567);color:#fff">🔊 Speak on Alexa</button>
@@ -734,6 +846,11 @@
     if(/\/announce\b/i.test(settings.alarm) && !/\/announce\b/i.test(settings.alexa)){
       var sw = settings.alarm; settings.alarm = settings.alexa; settings.alexa = sw;
     }
+    if(!settings.vm || typeof settings.vm !== "object") settings.vm = {};
+    if(!Array.isArray(settings.vm.rooms)) settings.vm.rooms = [];
+    if(!settings.vm.alarmText) settings.vm.alarmText = "Alarm. I need help now, please come quickly.";
+    if(!settings.theme) settings.theme = "dark";
+    if(typeof settings.gazeDwell !== "number") settings.gazeDwell = 0;
     var k = settings.kb || {};
     if(settings.sayMode !== "pc") settings.sayMode = "alexa";
     if(typeof settings.speaker !== "string" || !settings.speaker) settings.speaker = "kitchen-echo";
@@ -810,7 +927,7 @@
     tiles.forEach(function(tile, i){
       var btn = document.createElement("button");
       btn.className = "tile press" + (tile.mode === "alarm" ? " alarm" : "");
-      if(tile.mode !== "alarm") btn.style.backgroundColor = tile.colour || COLOURS[0];
+      if(tile.mode !== "alarm") btn.style.setProperty("--c", tile.colour || COLOURS[0]);
       btn.setAttribute("data-open", tile.id);
       var g = document.createElement("span"); g.className = "glyph"; g.textContent = tile.glyph || "◆";
       var n = document.createElement("span"); n.className = "name"; n.textContent = tile.name;
@@ -857,7 +974,7 @@
   function openTile(tile){
     if(tile.mode === "alarm"){
       openSheet("alarmSheet");
-      if(settings.alarm){ $("alarmGo").textContent = "Send again"; $("alarmGo").click(); }
+      if(alarmReady()){ $("alarmGo").textContent = "Send again"; $("alarmGo").click(); }
       return;
     }
     if(tile.mode === "chat"){ openChat(); return; }
@@ -938,14 +1055,15 @@
       setStatus("sayStatus","");
       $("sayText").value = "";
       markSay();
+      buildSayWhere();
       buildSayChips();
       lastInput = $("sayText"); lastInputAt = Date.now();
     }
     if(id === "alarmSheet"){
       setStatus("alarmStatus","");
-      $("alarmHint").textContent = settings.alarm
-        ? "This starts your Alexa routine — the announcement on every Echo, the lights, and the message to your carers."
-        : "No alarm address saved yet. Open Settings and paste your Voice Monkey trigger address first.";
+      $("alarmHint").textContent = alarmReady()
+        ? "This sounds the alarm on every speaker."
+        : "The alarm is not set up yet. Press Set up at the top of the Hub.";
     }
   }
   function closeSheets(){
@@ -1183,7 +1301,14 @@
     }catch(e){ beacon(url); }
   }
 
+  function alarmReady(){ return (vmReady() && settings.vm.alarm) || settings.alarm; }
   $("alarmGo").addEventListener("click", function(){
+    if(vmReady() && settings.vm.alarm){
+      setStatus("alarmStatus","Sending…");
+      fire(vmAnnounce(settings.vm.alarm, settings.vm.alarmText));
+      setTimeout(function(){ setStatus("alarmStatus","Alarm sent to every speaker. If they stay quiet, press again."); }, 700);
+      return;
+    }
     if(!settings.alarm){
       openSheet("settingsSheet");
       setStatus("settingsStatus","Paste your alarm address, then save.");
@@ -1201,7 +1326,18 @@
 
   /* the speaking address: the one saved in Settings, or else built from the
      alarm address (same Voice Monkey token) plus the speaker's name */
+  function vmReady(){ return !!(settings.vm && settings.vm.token); }
+  function vmTarget(){
+    var v = settings.vm, want = settings.sayTo || "all";
+    if(want !== "all") for(var i=0;i<v.rooms.length;i++) if(v.rooms[i].id === want) return want;
+    return v.all || (v.rooms[0] && v.rooms[0].id) || "";
+  }
+  function vmAnnounce(device, text){
+    return "https://api-v3.voicemonkey.io/announce?token=" + encodeURIComponent(settings.vm.token) +
+      "&device=" + encodeURIComponent(device) + (text ? "&speech=" + encodeURIComponent(text) : "");
+  }
   function speakingAddress(){
+    if(vmReady() && vmTarget()) return vmAnnounce(vmTarget(), "");
     if(settings.alexa) return settings.alexa;
     var pool = [settings.alarm || ""].concat((settings.commands || []).map(function(c){ return c.url || ""; }));
     var m = null;
@@ -1225,6 +1361,30 @@
     return true;
   }
 
+  function buildSayWhere(){
+    var wrap = $("sayWhere"), v = settings.vm, list = [];
+    if(vmReady() && v.all) list.push({id:"all", name:"All speakers", g:"🔊"});
+    if(vmReady()) v.rooms.forEach(function(r){ list.push({id:r.id, name:r.name, g:"📍"}); });
+    $("sayWhereWrap").hidden = list.length < 2;
+    var cur = settings.sayTo || "all";
+    if(!list.some(function(x){ return x.id === cur; }) && list.length) cur = list[0].id;
+    wrap.textContent = "";
+    list.forEach(function(x){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "g-btn";
+      b.setAttribute("data-cat", x.id === "all" ? "sys" : "nav");
+      b.setAttribute("aria-pressed", x.id === cur ? "true" : "false");
+      var g = document.createElement("span"); g.className = "glyph"; g.textContent = x.g;
+      b.appendChild(g); b.appendChild(document.createTextNode(x.name));
+      b.addEventListener("click", function(){
+        settings.sayTo = x.id; settings.sayMode = "alexa"; saveSettings(); buildSayWhere(); markSay();
+        var t = $("sayText").value.trim();
+        if(t && speak(t)){ kbLearn(t, "talk"); setStatus("sayStatus","Said on " + x.name + ": " + t); $("sayText").value = ""; }
+        else setStatus("sayStatus","Phrases will now speak on " + x.name + ".");
+      });
+      wrap.appendChild(b);
+    });
+  }
   function markSay(){
     $("sayHint").textContent = "Phrases speak on the " + (settings.sayMode === "pc" ? "computer" : "Alexa") + ", the last one you used.";
   }
@@ -2278,6 +2438,10 @@
   }
 
 })();
+</script>
+<script src="gaze-ui.js"></script>
+<script>
+  (function(){ try{ var s = JSON.parse(localStorage.getItem("gazehub.settings.v1")) || {}; GazeUI.theme(s.theme); GazeUI.dwell(s.gazeDwell || 0); }catch(e){ GazeUI.theme("dark"); } GazeUI.sound(false); })();
 </script>
 </body>
 </html>

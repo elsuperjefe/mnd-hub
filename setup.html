@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Set up your Hub</title>
+<meta name="theme-color" content="#070914">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="gaze-ui.css">
+<style>
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  .top { position: relative; z-index: 2; display: flex; align-items: center; gap: 18px; padding: 18px 28px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 800; }
+  .logo { width: 40px; height: 40px; border-radius: 13px; background: radial-gradient(circle at 50% 50%, var(--c-sys) 0 17%, transparent 19% 42%, var(--c-nav) 44% 54%, transparent 56%), linear-gradient(145deg, rgba(255,255,255,.16), rgba(255,255,255,.04)); border: 1px solid var(--line); }
+  .spacer { flex: 1; }
+  .stage { position: relative; z-index: 1; flex: 1; min-height: 0; overflow-y: auto; display: flex; justify-content: center; padding: 6px 28px 24px; }
+  .card { width: min(1100px, 100%); padding: 36px 40px; display: flex; flex-direction: column; gap: 26px; align-self: flex-start; }
+  .grid2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch; }
+  .row > .g-btn { flex: 1 1 220px; }
+  .value { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 22px; border-radius: 20px; background: var(--field); border: 2px dashed var(--line-strong); font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+  .value.set { border-style: solid; border-color: color-mix(in srgb, var(--c-sys) 60%, transparent); }
+  .value .k { color: var(--muted); font-weight: 600; font-size: 18px; }
+  .speaker { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center; padding: 14px 14px 14px 24px; border-radius: 24px; }
+  .speaker .nm { font-size: 24px; font-weight: 800; }
+  .speaker .id { font-size: 17px; color: var(--muted); overflow-wrap: anywhere; }
+  .nav { position: relative; z-index: 2; display: flex; gap: 18px; padding: 16px 28px 24px; }
+  .nav .g-btn { flex: 1; min-height: 104px; font-size: 28px; }
+  .nav .back { flex: 0 0 min(300px, 32%); }
+  .ask { padding: 20px 24px; border-radius: 24px; display: flex; flex-direction: column; gap: 16px; }
+  .ask p { font-size: 22px; font-weight: 700; }
+  .tip { font-size: 19px; color: var(--muted); line-height: 1.5; }
+  ol.tip { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+  .hero { font-size: 72px; line-height: 1; }
+  @media (max-width: 700px) {
+    .card { padding: 24px 20px; } .top, .nav, .stage { padding-left: 14px; padding-right: 14px; }
+    .speaker { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body class="gaze">
+<div class="backdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true"></span>Hub setup</div>
+  <div class="spacer"></div>
+  <div class="g-steps" id="dots" aria-hidden="true"></div>
+  <span class="g-chip" id="saved" data-tone="ok" hidden><span class="dot"></span>Saved</span>
+</header>
+
+<main class="stage"><section class="card glass g-in" id="card" aria-live="polite"></section></main>
+
+<nav class="nav" id="nav">
+  <button class="g-btn back" data-cat="set" id="backBtn"><span class="glyph">‹</span>Back</button>
+  <button class="g-btn solid" data-cat="sys" id="nextBtn">Next<span class="glyph">›</span></button>
+</nav>
+
+<script src="gaze-ui.js"></script>
+<script>
+(function () {
+  var KEY = 'gazehub.settings.v1';
+  var store = true;
+  try { localStorage.setItem('gazehub.test', '1'); localStorage.removeItem('gazehub.test'); } catch (e) { store = false; }
+  var settings = {};
+  try { settings = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+  if (!settings.vm) settings.vm = {};
+  var vm = settings.vm;
+  if (!Array.isArray(vm.rooms)) vm.rooms = [];
+  if (!vm.alarmText) vm.alarmText = 'Alarm. I need help now, please come quickly.';
+  if (!settings.theme) settings.theme = 'dark';
+  if (typeof settings.gazeDwell !== 'number') settings.gazeDwell = 0;
+  if (typeof settings.sound === 'undefined') settings.sound = 1;
+
+  GazeUI.theme(settings.theme); GazeUI.dwell(settings.gazeDwell); GazeUI.sound(settings.sound);
+
+  function save() {
+    if (!store) { GazeUI.toast('This browser will not keep settings. Open the Hub from its own web address.'); return; }
+    localStorage.setItem(KEY, JSON.stringify(settings));
+    var s = $('saved'); s.hidden = false; clearTimeout(save.t); save.t = setTimeout(function () { s.hidden = true; }, 1600);
+  }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+  /* ---------- Voice Monkey ---------- */
+  function cleanToken(raw) {
+    raw = String(raw || '').trim().replace(/&amp;/g, '&');
+    var m = raw.match(/token[=\/:]\s*([A-Za-z0-9_\-.%]+)/i);
+    return m ? decodeURIComponent(m[1]) : raw.replace(/\s+/g, '');
+  }
+  function cleanDevice(raw) {
+    raw = String(raw || '').trim().replace(/&amp;/g, '&');
+    var m = raw.match(/device[=\/:]\s*([A-Za-z0-9_\-.%]+)/i);
+    if (m) return decodeURIComponent(m[1]);
+    return raw.replace(/^['"\s]+|['"\s]+$/g, '').replace(/\s+/g, '-').toLowerCase();
+  }
+  function announce(device, text) {
+    if (!vm.token || !device) return false;
+    var url = 'https://api-v3.voicemonkey.io/announce?token=' + encodeURIComponent(vm.token) +
+      '&device=' + encodeURIComponent(device) + '&speech=' + encodeURIComponent(text);
+    try { fetch(url, { mode: 'no-cors', cache: 'no-store', keepalive: true }).catch(function () { new Image().src = url; }); }
+    catch (e) { new Image().src = url; }
+    return true;
+  }
+  function paste(then) {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) {
+        if (!t || !t.trim()) { GazeUI.toast('The clipboard is empty. Copy it first, then press Paste.'); return; }
+        then(t);
+      }).catch(function () { GazeUI.toast('Paste was blocked. Allow clipboard for this page, or type it in the box.'); showType = true; draw(); });
+    } else { showType = true; draw(); }
+  }
+
+  /* ---------- steps ---------- */
+  var ROOMS = ['Bedroom', 'Lounge', 'Kitchen', 'Bathroom', 'Hall', 'Office', 'Dining room', 'Landing'];
+  var ALARM_TEXTS = ['Alarm. I need help now, please come quickly.', 'Help please. Come to me now.', 'Emergency. Please come straight away.'];
+  var step = 0, showType = false, picking = false, pendingRoom = null, asked = null;
+
+  var STEPS = [
+    { id: 'hello', draw: function () {
+      return '<div class="hero" aria-hidden="true">👋</div>' +
+        '<h1 class="g-title">Let\'s set up your Hub</h1>' +
+        '<p class="g-lead">About 10 minutes. Every step is a big button, so it works with eye gaze or touch. A carer can help with the pasting steps.</p>' +
+        '<div class="row"><button class="g-btn" data-cat="apps" data-act="import"><span class="glyph">⇩</span>I have a setup code</button></div>' +
+        (vm.token ? '<p class="tip">Already set up on this device. Press Next to check or change anything.</p>' : '');
+    }},
+    { id: 'look', draw: function () {
+      return '<h1 class="g-title">How should it look?</h1>' +
+        '<p class="g-label">Colours</p><div class="grid2">' +
+        b('theme', 'dark', '🌙', 'Dark', settings.theme === 'dark', 'nav') + b('theme', 'light', '☀️', 'Light', settings.theme === 'light', 'apps') + '</div>' +
+        '<p class="g-label">Button sound</p><div class="grid2">' +
+        b('sound', '1', '🔔', 'On', !!settings.sound, 'sys') + b('sound', '0', '🔕', 'Off', !settings.sound, 'set') + '</div>' +
+        '<p class="g-label">Look to press (dwell)</p><div class="grid3">' +
+        b('dwell', '0', '✋', 'Off', settings.gazeDwell === 0, 'set') + b('dwell', '600', '⚡', 'Quick', settings.gazeDwell === 600, 'gaze') +
+        b('dwell', '900', '👁️', 'Normal', settings.gazeDwell === 900, 'gaze') + b('dwell', '1400', '🐢', 'Slow', settings.gazeDwell === 1400, 'gaze') + '</div>' +
+        '<p class="tip">Leave dwell Off if Tobii or Windows Eye Control already clicks for you, otherwise buttons would press twice.</p>';
+    }},
+    { id: 'account', draw: function () {
+      return '<div class="hero" aria-hidden="true">🐵</div><h1 class="g-title">Voice Monkey account</h1>' +
+        '<p class="g-lead">Voice Monkey lets the Hub speak through your Alexa speakers. It is free.</p>' +
+        '<ol class="tip"><li>Press <b>Open Voice Monkey</b> and sign in with the same Amazon account as your Alexa.</li>' +
+        '<li>Enable the <b>Voice Monkey</b> skill in the Alexa app when it asks.</li>' +
+        '<li>Create one <b>Speaker</b> for the alarm, one for all speakers, and one for each room. Each needs a routine in the Alexa app (Voice Monkey shows how).</li></ol>' +
+        '<div class="row"><button class="g-btn" data-cat="nav" data-act="open" data-url="https://app.voicemonkey.io/speakers"><span class="glyph">↗</span>Open Voice Monkey</button></div>';
+    }},
+    { id: 'token', draw: function () {
+      return '<h1 class="g-title">Your Voice Monkey key</h1>' +
+        '<p class="g-lead">In Voice Monkey, open <b>Dashboard → API credentials</b> and copy your token. Then press Paste.</p>' +
+        value('Key', vm.token ? '••••••••' + vm.token.slice(-4) : '', 'Not pasted yet') +
+        '<div class="row"><button class="g-btn solid" data-cat="sys" data-act="paste-token"><span class="glyph">📋</span>Paste key</button>' +
+        (vm.token ? '<button class="g-btn" data-cat="danger" data-act="clear-token"><span class="glyph">✕</span>Remove</button>' : '') + '</div>' +
+        typeBox('token') +
+        '<p class="tip">You can also paste a whole Voice Monkey web address. The Hub picks the key out of it.</p>';
+    }},
+    { id: 'alarm', draw: function () {
+      return '<h1 class="g-title">Alarm speaker</h1>' +
+        '<p class="g-lead">Copy the <b>device ID</b> from your Alarm speaker\'s card in Voice Monkey, then press Paste. Its routines should play on every speaker.</p>' +
+        value('Alarm', vm.alarm || '', 'Not pasted yet') +
+        '<div class="row"><button class="g-btn solid" data-cat="sys" data-act="paste-dev" data-for="alarm"><span class="glyph">📋</span>Paste device ID</button>' +
+        '<button class="g-btn" data-cat="danger" data-act="test" data-for="alarm"' + (vm.alarm && vm.token ? '' : ' disabled') + '><span class="glyph">🔊</span>Test alarm</button></div>' +
+        typeBox('alarm') + askBox('alarm') +
+        '<p class="g-label">What the alarm says</p><div class="grid3">' +
+        ALARM_TEXTS.map(function (t, i) { return b('alarmText', String(i), '🚨', t, vm.alarmText === t, 'danger'); }).join('') + '</div>';
+    }},
+    { id: 'all', draw: function () {
+      return '<h1 class="g-title">All speakers</h1>' +
+        '<p class="g-lead">For <b>Say aloud</b> on every speaker at once. Copy the device ID of your "All Speakers" speaker, then press Paste.</p>' +
+        value('All speakers', vm.all || '', 'Not pasted yet') +
+        '<div class="row"><button class="g-btn solid" data-cat="sys" data-act="paste-dev" data-for="all"><span class="glyph">📋</span>Paste device ID</button>' +
+        '<button class="g-btn" data-cat="nav" data-act="test" data-for="all"' + (vm.all && vm.token ? '' : ' disabled') + '><span class="glyph">🔊</span>Test</button></div>' +
+        typeBox('all') + askBox('all');
+    }},
+    { id: 'rooms', draw: function () {
+      var list = vm.rooms.map(function (r, i) {
+        return '<div class="speaker glass"><div><div class="nm">' + esc(r.name) + '</div><div class="id">' + esc(r.id) + '</div></div>' +
+          '<button class="g-btn small" data-cat="nav" data-act="test-room" data-i="' + i + '"><span class="glyph">🔊</span>Test</button>' +
+          '<button class="g-btn small" data-cat="danger" data-act="del-room" data-i="' + i + '"><span class="glyph">✕</span>Remove</button></div>' +
+          (asked === 'room' + i ? askBox('room' + i) : '');
+      }).join('');
+      var add;
+      if (pendingRoom) {
+        add = '<div class="ask glass"><p>' + esc(pendingRoom) + ': copy its device ID in Voice Monkey, then press Paste.</p>' +
+          '<div class="row"><button class="g-btn solid" data-cat="sys" data-act="paste-room"><span class="glyph">📋</span>Paste device ID</button>' +
+          '<button class="g-btn" data-cat="set" data-act="cancel-room"><span class="glyph">✕</span>Cancel</button></div>' + typeBox('room') + '</div>';
+      } else if (picking) {
+        add = '<p class="g-label">Which room?</p><div class="grid3">' +
+          ROOMS.map(function (r) { return '<button class="g-btn" data-cat="apps" data-act="pick-room" data-room="' + r + '">' + r + '</button>'; }).join('') +
+          '<button class="g-btn" data-cat="set" data-act="cancel-room"><span class="glyph">✕</span>Cancel</button></div>';
+      } else {
+        add = '<div class="row"><button class="g-btn solid" data-cat="apps" data-act="add-room"><span class="glyph">＋</span>Add a room speaker</button></div>';
+      }
+      return '<h1 class="g-title">One button per speaker</h1>' +
+        '<p class="g-lead">Each room speaker becomes its own button in <b>Say aloud</b>, so you can speak in just one room.</p>' +
+        (list || '<p class="tip">No room speakers yet.</p>') + add;
+    }},
+    { id: 'claude', draw: function () {
+      return '<h1 class="g-title">Claude (optional)</h1>' +
+        '<p class="g-lead">For the Ask Claude bar and sentence ideas on the keyboard. Paste an Anthropic API key, or press Next to skip.</p>' +
+        value('Claude key', settings.key ? '••••••••' + settings.key.slice(-4) : '', 'Skipped') +
+        '<div class="row"><button class="g-btn solid" data-cat="sys" data-act="paste-key"><span class="glyph">📋</span>Paste key</button>' +
+        (settings.key ? '<button class="g-btn" data-cat="danger" data-act="clear-key"><span class="glyph">✕</span>Remove</button>' : '') + '</div>' +
+        typeBox('key') + '<p class="tip">Set a monthly spend limit on the key in the Anthropic console.</p>';
+    }},
+    { id: 'done', draw: function () {
+      var ok = vm.token && vm.alarm;
+      return '<div class="hero" aria-hidden="true">' + (ok ? '🎉' : '🧩') + '</div>' +
+        '<h1 class="g-title">' + (ok ? 'All set' : 'Nearly there') + '</h1>' +
+        '<p class="g-lead">' + (ok ? 'Your alarm and Say aloud are ready.' : 'The alarm still needs a Voice Monkey key and an alarm speaker. You can come back any time.') + '</p>' +
+        '<div class="grid2"><button class="g-btn tall solid" data-cat="sys" data-act="hub"><span class="glyph">⌂</span>Open my Hub</button>' +
+        '<button class="g-btn tall" data-cat="apps" data-act="export"><span class="glyph">⧉</span>Copy setup code</button></div>' +
+        '<p class="tip">The setup code holds your private key. Keep it safe, and only paste it on your own devices.</p>';
+    }}
+  ];
+
+  function b(act, val, glyph, label, on, cat) {
+    return '<button class="g-btn' + (label.length > 24 ? ' small' : '') + '" data-cat="' + cat + '" data-act="' + act + '" data-val="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '"><span class="glyph">' + glyph + '</span>' + esc(label) + '</button>';
+  }
+  function value(k, v, empty) {
+    return '<div class="value' + (v ? ' set' : '') + '"><span class="k">' + esc(k) + '</span>' + (v ? esc(v) : '<span class="k">' + esc(empty) + '</span>') + '</div>';
+  }
+  function typeBox(forWhat) {
+    if (!showType) return '<button class="g-btn small" data-cat="set" data-act="show-type" style="align-self:flex-start"><span class="glyph">⌨</span>Type it instead</button>';
+    return '<div class="row"><input class="g-field" id="typed" autocomplete="off" spellcheck="false" placeholder="Type or paste here" style="flex:3 1 300px">' +
+      '<button class="g-btn small solid" data-cat="sys" data-act="use-typed" data-for="' + forWhat + '">Use this</button></div>';
+  }
+  function askBox(key) {
+    if (asked !== key) return '';
+    return '<div class="ask glass"><p>Did it speak?</p><div class="grid2">' +
+      '<button class="g-btn" data-cat="sys" data-act="heard" data-val="yes"><span class="glyph">👍</span>Yes</button>' +
+      '<button class="g-btn" data-cat="danger" data-act="heard" data-val="no"><span class="glyph">👎</span>No</button></div></div>';
+  }
+
+  function draw() {
+    var card = $('card');
+    card.classList.remove('g-in'); void card.offsetWidth; card.classList.add('g-in');
+    card.innerHTML = STEPS[step].draw();
+    $('dots').innerHTML = STEPS.map(function (s, i) { return '<i class="' + (i === step ? 'now' : i < step ? 'done' : '') + '"></i>'; }).join('');
+    $('backBtn').style.visibility = step === 0 ? 'hidden' : 'visible';
+    $('nextBtn').hidden = step === STEPS.length - 1;
+    var t = $('typed'); if (t) t.focus();
+  }
+  function go(d) { step = Math.max(0, Math.min(STEPS.length - 1, step + d)); showType = false; picking = false; pendingRoom = null; asked = null; draw(); $('card').parentNode.scrollTop = 0; }
+
+  function useValue(forWhat, raw) {
+    if (forWhat === 'token') { vm.token = cleanToken(raw); save(); GazeUI.toast('Key saved.'); }
+    else if (forWhat === 'key') { settings.key = String(raw).trim(); save(); GazeUI.toast('Claude key saved.'); }
+    else if (forWhat === 'room') {
+      var tok = cleanToken(raw); if (/token/i.test(raw) && tok && !vm.token) vm.token = tok;
+      vm.rooms.push({ name: pendingRoom, id: cleanDevice(raw) }); pendingRoom = null; picking = false; save();
+    }
+    else { var tk = cleanToken(raw); if (/token/i.test(raw) && tk && !vm.token) vm.token = tk; vm[forWhat] = cleanDevice(raw); save(); }
+    showType = false; draw();
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]'); if (!el) return;
+    var act = el.getAttribute('data-act'), val = el.getAttribute('data-val'), f = el.getAttribute('data-for');
+    switch (act) {
+      case 'theme': settings.theme = val; GazeUI.theme(val); save(); draw(); break;
+      case 'sound': settings.sound = Number(val); GazeUI.sound(settings.sound); save(); draw(); break;
+      case 'dwell': settings.gazeDwell = Number(val); GazeUI.dwell(settings.gazeDwell); save(); draw(); break;
+      case 'alarmText': vm.alarmText = ALARM_TEXTS[Number(val)]; save(); draw(); break;
+      case 'open': window.open(el.getAttribute('data-url'), '_blank'); break;
+      case 'paste-token': paste(function (t) { useValue('token', t); }); break;
+      case 'paste-key': paste(function (t) { useValue('key', t); }); break;
+      case 'paste-dev': paste(function (t) { useValue(f, t); }); break;
+      case 'paste-room': paste(function (t) { useValue('room', t); }); break;
+      case 'clear-token': vm.token = ''; save(); draw(); break;
+      case 'clear-key': settings.key = ''; save(); draw(); break;
+      case 'show-type': showType = true; draw(); break;
+      case 'use-typed': var v = ($('typed') || {}).value || ''; if (!v.trim()) { GazeUI.toast('Type or paste it in the box first.'); return; } useValue(f, v); break;
+      case 'test':
+        if (announce(vm[f], f === 'alarm' ? vm.alarmText : 'This is a test from your Hub, on all speakers.')) { asked = f; draw(); GazeUI.toast('Sent. Listen to your speakers.'); }
+        break;
+      case 'test-room':
+        var r = vm.rooms[Number(el.getAttribute('data-i'))];
+        if (!vm.token) { GazeUI.toast('Paste your Voice Monkey key first.'); return; }
+        if (r && announce(r.id, 'This is a test from your Hub, in the ' + r.name.toLowerCase() + '.')) { asked = 'room' + el.getAttribute('data-i'); draw(); }
+        break;
+      case 'heard':
+        if (val === 'yes') { asked = null; draw(); GazeUI.toast('Brilliant, that one works.'); }
+        else { asked = null; draw(); GazeUI.toast('Check the device ID, and that its Alexa routine ends with Skills → Voice Monkey.'); }
+        break;
+      case 'add-room': picking = true; draw(); break;
+      case 'pick-room': pendingRoom = el.getAttribute('data-room'); if (vm.rooms.some(function (r) { return r.name === pendingRoom; })) pendingRoom += ' 2'; draw(); break;
+      case 'cancel-room': picking = false; pendingRoom = null; showType = false; draw(); break;
+      case 'del-room': vm.rooms.splice(Number(el.getAttribute('data-i')), 1); save(); draw(); break;
+      case 'hub': location.href = './index.html'; break;
+      case 'export':
+        var code = 'HUB1:' + btoa(unescape(encodeURIComponent(JSON.stringify({ vm: vm, theme: settings.theme, sound: settings.sound, gazeDwell: settings.gazeDwell, key: settings.key || '' }))));
+        if (navigator.clipboard) navigator.clipboard.writeText(code).then(function () { GazeUI.toast('Setup code copied. Paste it on the other device.'); }, function () { prompt('Copy this setup code', code); });
+        else prompt('Copy this setup code', code);
+        break;
+      case 'import':
+        paste(function (t) {
+          try {
+            var d = JSON.parse(decodeURIComponent(escape(atob(t.trim().replace(/^HUB1:/, '')))));
+            if (!d.vm) throw 0;
+            settings.vm = vm = d.vm; if (!Array.isArray(vm.rooms)) vm.rooms = [];
+            ['theme', 'sound', 'gazeDwell'].forEach(function (k) { if (k in d) settings[k] = d[k]; });
+            if (d.key) settings.key = d.key;
+            GazeUI.theme(settings.theme); GazeUI.dwell(settings.gazeDwell); GazeUI.sound(settings.sound);
+            save(); step = STEPS.length - 1; draw(); GazeUI.toast('Setup copied in.');
+          } catch (err) { GazeUI.toast('That is not a Hub setup code. Copy the whole code and try again.'); }
+        });
+        break;
+    }
+  });
+  $('backBtn').addEventListener('click', function () { go(-1); });
+  $('nextBtn').addEventListener('click', function () { go(1); });
+  draw();
+})();
+</script>
+</body>
+</html>
